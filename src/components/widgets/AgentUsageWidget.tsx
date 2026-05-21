@@ -35,11 +35,11 @@ export function AgentUsageWidget() {
   return (
     <div className="h-full w-full flex flex-col">
       <Header icon={<BarChart3 size={14} />} title="AI 用量" right={data?.source ? data.source : undefined} />
-      <div className="flex-1 min-h-0 scroll-area mt-2 space-y-1.5">
+      <div className="flex-1 min-h-0 scroll-area mt-2 space-y-1.5 flex flex-col">
         {!data && (
-          <div className="text-white/40 text-xs">
-            后端会读取 <code className="font-mono">~/.claude</code> / <code className="font-mono">~/.codex</code> 本地缓存里的会话/限额信息。
-            如未运行后端，可在此显示手动记录。
+          <div className="flex-1 grid place-items-center text-white/40 text-xs text-center px-2">
+            后端读取 <code className="font-mono mx-1">~/.claude</code> /
+            <code className="font-mono mx-1">~/.codex</code> 本地缓存里的会话与限额信息。
           </div>
         )}
         {data?.agents.map((a) => {

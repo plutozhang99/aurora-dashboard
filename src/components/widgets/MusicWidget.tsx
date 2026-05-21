@@ -91,9 +91,9 @@ export function MusicWidget() {
           </button>
         }
       />
-      <div className="flex-1 min-h-0 flex flex-col mt-2">
-        <div className="rounded-xl bg-white/5 p-3 flex-1 min-h-0 flex flex-col justify-between">
-          <div className="text-sm truncate">{cur ? cur.name : '拖入或上传一首曲子…'}</div>
+      <div className="flex-1 min-h-0 flex flex-col mt-2 gap-2">
+        <div className="rounded-xl bg-white/5 p-3 flex-1 min-h-0 flex flex-col items-center justify-center gap-3 text-center">
+          <div className="text-sm truncate w-full">{cur ? cur.name : '拖入或上传一首曲子…'}</div>
           <audio ref={audioRef} onEnded={() => setIdx(idx + 1)} />
           <div className="flex items-center justify-center gap-3">
             <button className="text-white/70 hover:text-white" onClick={() => setIdx(Math.max(0, idx - 1))}><SkipBack size={16} /></button>
@@ -113,8 +113,11 @@ export function MusicWidget() {
               {cur?.liked ? <Heart size={16} fill="currentColor" /> : <HeartOff size={16} />}
             </button>
           </div>
+          {tracks.length > 0 && (
+            <div className="text-[10px] text-white/40">{idx % Math.max(1, tracks.length) + 1} / {tracks.length}</div>
+          )}
         </div>
-        <label className="btn mt-2 cursor-pointer justify-center">
+        <label className="btn shrink-0 cursor-pointer justify-center">
           <Upload size={14} /> 上传音频
           <input type="file" accept="audio/*" multiple className="hidden" onChange={(e) => onUpload(e.target.files)} />
         </label>

@@ -100,10 +100,16 @@ export const useStore = create<DataState>((set, get) => ({
   },
 }));
 
-// Widget category weights — drives column distribution & ideal heights.
+// Widget category weights and max heights — drives column distribution.
+// MAX_H prevents a single widget from being stretched past a useful height
+// (e.g. music / agent-usage have a fixed-height layout and look empty if too tall).
 const WEIGHT: Record<string, number> = {
-  clock: 1, weather: 1, system: 1, 'agent-usage': 1, chat: 1,
-  calendar: 2, todo: 2, email: 2, news: 2, music: 2,
+  clock: 1, weather: 2, system: 1, 'agent-usage': 1, chat: 1,
+  calendar: 2, todo: 2, email: 2, news: 2, music: 1,
+};
+const MAX_H: Record<string, number> = {
+  clock: 5, weather: 7, system: 5, 'agent-usage': 5, chat: 4, music: 6,
+  calendar: 12, todo: 12, email: 12, news: 12,
 };
 
 /**
@@ -127,14 +133,28 @@ function autoFit(widgets: WidgetInstance[], cols: number, targetRows: number): L
   }
 
   const out: LayoutItem[] = [];
+  // Build a uid -> widget type map so the height pass can apply per-type caps.
+  const typeOf = new Map(widgets.map((w) => [w.id, w.type] as const));
+
   columns.forEach((col, idx) => {
     if (!col.items.length) return;
-    // Scale each item's row span so the column sums to targetRows.
+    // Scale each item's row span proportionally to its weight, then cap by type
+    // so a single short widget doesn't get stretched into a sea of empty space.
     const scale = targetRows / col.sum;
-    const raw = col.items.map((it) => Math.max(3, Math.round(it.weight * scale)));
-    // Adjust last row to absorb rounding drift.
-    const drift = targetRows - raw.reduce((a, b) => a + b, 0);
-    raw[raw.length - 1] = Math.max(3, raw[raw.length - 1] + drift);
+    const raw = col.items.map((it) => {
+      const cap = MAX_H[typeOf.get(it.id) ?? ''] ?? 12;
+      return Math.min(cap, Math.max(3, Math.round(it.weight * scale)));
+    });
+    // Distribute leftover rows to items that still have headroom under their cap.
+    let drift = targetRows - raw.reduce((a, b) => a + b, 0);
+    while (drift > 0) {
+      let placed = false;
+      for (let i = 0; i < raw.length && drift > 0; i++) {
+        const cap = MAX_H[typeOf.get(col.items[i].id) ?? ''] ?? 12;
+        if (raw[i] < cap) { raw[i] += 1; drift -= 1; placed = true; }
+      }
+      if (!placed) break; // all items at cap — accept slightly shorter column
+    }
     let y = 0;
     col.items.forEach((it, i) => {
       const h = raw[i];

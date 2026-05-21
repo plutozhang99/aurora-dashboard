@@ -50,11 +50,13 @@ export function SettingsPanel() {
           <div className="text-lg font-display font-semibold">设置</div>
           <button className="text-white/60 hover:text-white" onClick={() => setOpen(false)}><X /></button>
         </div>
-        <div className="flex gap-3 px-5 py-3 border-b border-white/10 text-sm overflow-x-auto">
+        <div className="shrink-0 flex gap-2 px-5 py-3 mb-1 border-b border-white/10 text-sm overflow-x-auto scrollbar-thin">
           {(['general','weather','email','ai','prompts','news','music','widgets'] as const).map((t) => (
             <button
               key={t}
-              className={`px-3 py-1 rounded-lg ${tab === t ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white'}`}
+              className={`shrink-0 px-3 py-1 rounded-lg focus:outline-none transition ${
+                tab === t ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
               onClick={() => setTab(t)}
             >{tabLabel(t)}</button>
           ))}
