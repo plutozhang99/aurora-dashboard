@@ -1,4 +1,5 @@
 import type { AppSettings, ChatPersona } from '@/types';
+import { effectivePersonaPrompt } from '@/types';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -20,6 +21,8 @@ export async function chat(
     return '请先在「设置 → AI」中配置 API Key 与 provider。';
   }
 
+  const system = effectivePersonaPrompt(settings, persona.id);
+
   if (settings.aiProvider === 'anthropic') {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -32,7 +35,7 @@ export async function chat(
       body: JSON.stringify({
         model: settings.aiModel || 'claude-sonnet-4-6',
         max_tokens: 1024,
-        system: persona.systemPrompt,
+        system,
         messages: history.map((m) => ({ role: m.role === 'system' ? 'user' : m.role, content: m.content })),
       }),
     });
@@ -50,7 +53,7 @@ export async function chat(
       },
       body: JSON.stringify({
         model: settings.aiModel || 'gpt-4o-mini',
-        messages: [{ role: 'system', content: persona.systemPrompt }, ...history],
+        messages: [{ role: 'system', content: system }, ...history],
       }),
     });
     if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);

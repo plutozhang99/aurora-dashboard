@@ -15,19 +15,21 @@ export function Dashboard() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [rowHeight, setRowHeight] = useState(64);
 
-  // Fit content to viewport (no-scroll). We compute rowHeight based on
-  // viewport height divided by max layout row count.
+  // Fit content to viewport (no-scroll). We compute rowHeight based on the
+  // container's actual inner area divided by max layout row count.
   useEffect(() => {
     function recompute() {
-      if (!containerRef.current) return;
-      const h = containerRef.current.clientHeight;
+      const el = containerRef.current;
+      if (!el) return;
+      const cs = getComputedStyle(el);
+      const padTop = parseFloat(cs.paddingTop) || 0;
+      const padBottom = parseFloat(cs.paddingBottom) || 0;
+      const available = el.clientHeight - padTop - padBottom;
       const bp = pickBreakpoint(window.innerWidth);
       const items = layout.layouts[bp];
       if (!items.length) return;
       const maxRow = Math.max(...items.map((l) => l.y + l.h));
       const margin = 12;
-      const padding = 12;
-      const available = h - padding * 2;
       // formula matches react-grid-layout: total = rows * rowHeight + (rows-1) * margin
       const rh = Math.max(36, Math.floor((available - (maxRow - 1) * margin) / maxRow));
       setRowHeight(rh);

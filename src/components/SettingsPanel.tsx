@@ -3,7 +3,8 @@ import { X, PlusCircle } from 'lucide-react';
 import { useStore, useUI } from '@/lib/store';
 import { reverseGeocode } from '@/lib/weather';
 import { WIDGET_CATALOG } from './widgets';
-import type { AppSettings, WidgetInstance } from '@/types';
+import type { AppSettings, WidgetInstance, PromptOverrides } from '@/types';
+import { DEFAULT_PROMPTS, PERSONAS, DEFAULT_EMAIL_KEYWORDS, DEFAULT_SCHEDULE_KEYWORDS } from '@/types';
 
 export function SettingsPanel() {
   const setOpen = useUI((s) => s.setSettingsOpen);
@@ -14,7 +15,7 @@ export function SettingsPanel() {
 
   const [draft, setDraft] = useState<AppSettings>(settings);
   const [cityQuery, setCityQuery] = useState('');
-  const [tab, setTab] = useState<'general' | 'weather' | 'email' | 'ai' | 'news' | 'music' | 'widgets'>('general');
+  const [tab, setTab] = useState<'general' | 'weather' | 'email' | 'ai' | 'prompts' | 'news' | 'music' | 'widgets'>('general');
 
   useEffect(() => setDraft(settings), [settings]);
 
@@ -50,7 +51,7 @@ export function SettingsPanel() {
           <button className="text-white/60 hover:text-white" onClick={() => setOpen(false)}><X /></button>
         </div>
         <div className="flex gap-3 px-5 py-3 border-b border-white/10 text-sm overflow-x-auto">
-          {(['general','weather','email','ai','news','music','widgets'] as const).map((t) => (
+          {(['general','weather','email','ai','prompts','news','music','widgets'] as const).map((t) => (
             <button
               key={t}
               className={`px-3 py-1 rounded-lg ${tab === t ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white'}`}
@@ -126,6 +127,12 @@ export function SettingsPanel() {
               <div className="text-xs text-white/40">直连 provider 时如遇 CORS，可启动本地后端并设置「本地后端 API 地址」由后端转发。</div>
             </>
           )}
+          {tab === 'prompts' && (
+            <PromptsTab
+              draft={draft}
+              up={up}
+            />
+          )}
           {tab === 'news' && (
             <FieldList
               label="RSS 源 (每行一个)"
@@ -176,7 +183,7 @@ export function SettingsPanel() {
 }
 
 function tabLabel(t: string) {
-  return { general: '通用', weather: '天气', email: '邮件', ai: 'AI', news: '新闻', music: '音乐', widgets: '组件' }[t] ?? t;
+  return { general: '通用', weather: '天气', email: '邮件', ai: 'AI', prompts: '提示词', news: '新闻', music: '音乐', widgets: '组件' }[t] ?? t;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -193,6 +200,200 @@ function FieldList({ label, value, onChange }: { label: string; value: string; o
     <Field label={label}>
       <textarea className="input min-h-[120px] font-mono text-xs" value={value} onChange={(e) => onChange(e.target.value)} />
     </Field>
+  );
+}
+
+function PromptsTab({
+  draft,
+  up,
+}: {
+  draft: AppSettings;
+  up: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void;
+}) {
+  const prompts = draft.prompts;
+  const setPrompts = (next: PromptOverrides) => up('prompts', next);
+  const hasAi = draft.aiProvider !== 'none' && !!draft.aiApiKey;
+
+  return (
+    <div className="space-y-5">
+      <div className="text-xs text-white/50">
+        每个 AI 相关功能都可以单独切换为 AI / 关键词模式，所有提示词与关键词都可以自定义并恢复默认。
+        {!hasAi && ' 当前未配置 AI Provider — 切换到 AI 模式时会自动退回关键词。'}
+      </div>
+
+      <Section title="邮件 · 重要性判定">
+        <ModeSwitch
+          value={draft.emailImportanceMode}
+          onChange={(v) => up('emailImportanceMode', v)}
+          aiAvailable={hasAi}
+        />
+        {draft.emailImportanceMode === 'ai' ? (
+          <PromptEditor
+            value={prompts.emailImportance}
+            defaultValue={DEFAULT_PROMPTS.emailImportance}
+            onChange={(v) => setPrompts({ ...prompts, emailImportance: v })}
+          />
+        ) : (
+          <KeywordEditor
+            value={draft.emailImportanceKeywords}
+            defaultValue={DEFAULT_EMAIL_KEYWORDS}
+            onChange={(v) => up('emailImportanceKeywords', v)}
+            hint="主题 / 正文 / 发件人 命中任意关键词即视为重要"
+          />
+        )}
+      </Section>
+
+      <Section title="日程 · 今日事件抽取">
+        <ModeSwitch
+          value={draft.scheduleMode}
+          onChange={(v) => up('scheduleMode', v)}
+          aiAvailable={hasAi}
+        />
+        {draft.scheduleMode === 'ai' ? (
+          <PromptEditor
+            value={prompts.scheduleExtract}
+            defaultValue={DEFAULT_PROMPTS.scheduleExtract}
+            onChange={(v) => setPrompts({ ...prompts, scheduleExtract: v })}
+          />
+        ) : (
+          <KeywordEditor
+            value={draft.scheduleHintKeywords}
+            defaultValue={DEFAULT_SCHEDULE_KEYWORDS}
+            onChange={(v) => up('scheduleHintKeywords', v)}
+            hint="主题或正文命中任意关键词即视为候选日程；时间由内置正则推断"
+          />
+        )}
+      </Section>
+
+      <Section title="AI 聊天 · 人格提示词">
+        <div className="space-y-3">
+          {PERSONAS.map((p) => (
+            <div key={p.id} className="rounded-xl bg-white/5 p-3">
+              <div className="text-sm mb-2 flex items-center gap-2">
+                <span className="text-lg">{p.emoji}</span>
+                <span>{p.name}</span>
+                <span className="text-[10px] text-white/40 font-mono">{p.id}</span>
+              </div>
+              <PromptEditor
+                value={prompts.personas[p.id] ?? ''}
+                defaultValue={DEFAULT_PROMPTS.personas[p.id] ?? ''}
+                onChange={(v) =>
+                  setPrompts({ ...prompts, personas: { ...prompts.personas, [p.id]: v } })
+                }
+              />
+            </div>
+          ))}
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+function ModeSwitch({
+  value,
+  onChange,
+  aiAvailable,
+}: {
+  value: 'ai' | 'keyword';
+  onChange: (v: 'ai' | 'keyword') => void;
+  aiAvailable: boolean;
+}) {
+  return (
+    <div className="inline-flex rounded-lg bg-white/5 p-1 text-xs mb-2">
+      {(['ai', 'keyword'] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          className={`px-3 py-1 rounded-md transition ${
+            value === m ? 'bg-aurora-violet/30 text-white' : 'text-white/60 hover:text-white'
+          }`}
+          onClick={() => onChange(m)}
+        >
+          {m === 'ai' ? `AI 判定${aiAvailable ? '' : ' (未配置)'}` : '关键词匹配'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function KeywordEditor({
+  value,
+  defaultValue,
+  onChange,
+  hint,
+}: {
+  value: string[];
+  defaultValue: string[];
+  onChange: (v: string[]) => void;
+  hint?: string;
+}) {
+  const text = value.join('\n');
+  const isDefault =
+    value.length === defaultValue.length && value.every((v, i) => v === defaultValue[i]);
+  return (
+    <div className="space-y-1">
+      <textarea
+        className="input min-h-[120px] font-mono text-xs leading-relaxed"
+        value={text}
+        onChange={(e) =>
+          onChange(e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))
+        }
+        placeholder={defaultValue.join('\n')}
+      />
+      <div className="flex items-center justify-between text-[11px] text-white/40">
+        <span>{hint ?? '每行一个关键词，大小写不敏感'}</span>
+        <button
+          type="button"
+          className="text-aurora-cyan hover:underline disabled:opacity-30"
+          disabled={isDefault}
+          onClick={() => onChange([...defaultValue])}
+        >
+          恢复默认
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-sm font-medium text-white/80 mb-2">{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function PromptEditor({
+  value,
+  defaultValue,
+  onChange,
+}: {
+  value: string;
+  defaultValue: string;
+  onChange: (v: string) => void;
+}) {
+  const isDefault = value.trim() === defaultValue.trim() || value.trim() === '';
+  return (
+    <div className="space-y-1">
+      <textarea
+        className="input min-h-[140px] font-mono text-xs leading-relaxed"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={defaultValue}
+      />
+      <div className="flex items-center justify-between text-[11px] text-white/40">
+        <span>{isDefault ? '使用默认提示词' : '已自定义'}</span>
+        <button
+          type="button"
+          className="text-aurora-cyan hover:underline disabled:opacity-30"
+          disabled={isDefault}
+          onClick={() => onChange(defaultValue)}
+        >
+          恢复默认
+        </button>
+      </div>
+    </div>
   );
 }
 

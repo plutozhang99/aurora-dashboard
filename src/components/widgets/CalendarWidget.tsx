@@ -18,6 +18,12 @@ export function CalendarWidget() {
         body: JSON.stringify({
           host: settings.emailHost, port: settings.emailPort,
           user: settings.emailUser, pass: settings.emailPassword, secure: settings.emailSecure,
+          mode: settings.scheduleMode,
+          keywords: settings.scheduleHintKeywords,
+          ai: settings.aiProvider !== 'none' && settings.aiApiKey
+            ? { provider: settings.aiProvider, apiKey: settings.aiApiKey, model: settings.aiModel }
+            : undefined,
+          prompt: settings.prompts.scheduleExtract,
         }),
       }).catch(() => ({ items: [] as ScheduleItem[] }));
       return { items: res.items, hasBackend: true };

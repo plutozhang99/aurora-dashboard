@@ -1,9 +1,10 @@
-import { Settings, Pencil, MessageCircle, RotateCcw } from 'lucide-react';
+import { Settings, Pencil, MessageCircle, RotateCcw, LayoutGrid } from 'lucide-react';
 import { useStore, useUI } from '@/lib/store';
 
 export function TopBar() {
   const { setSettingsOpen, setEditMode, setChatOpen, editMode } = useUI();
   const reset = useStore((s) => s.resetLayout);
+  const autoFit = useStore((s) => s.autoFitLayout);
   return (
     <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-5 pt-3 pb-2 select-none">
       <div className="flex items-center gap-2">
@@ -19,9 +20,14 @@ export function TopBar() {
           <Pencil size={14} /> {editMode ? '完成' : '布局'}
         </button>
         {editMode && (
-          <button className="btn" onClick={() => reset()} title="重置布局">
-            <RotateCcw size={14} /> 重置
-          </button>
+          <>
+            <button className="btn" onClick={() => autoFit()} title="按当前组件数量均衡铺满屏幕">
+              <LayoutGrid size={14} /> 填满
+            </button>
+            <button className="btn" onClick={() => reset()} title="重置为默认布局">
+              <RotateCcw size={14} /> 重置
+            </button>
+          </>
         )}
         <button className="btn" onClick={() => setChatOpen(true)} title="打开 AI 聊天">
           <MessageCircle size={14} /> 聊天

@@ -31,7 +31,17 @@ export async function setKV(key: string, value: unknown) {
 
 export async function loadSettings(): Promise<AppSettings> {
   const stored = await getKV<Partial<AppSettings>>('settings', {});
-  return { ...DEFAULT_SETTINGS, ...stored };
+  const merged = { ...DEFAULT_SETTINGS, ...stored };
+  // Deep-merge prompts so newly added defaults (e.g. new persona) appear for existing users.
+  merged.prompts = {
+    ...DEFAULT_SETTINGS.prompts,
+    ...(stored.prompts ?? {}),
+    personas: {
+      ...DEFAULT_SETTINGS.prompts.personas,
+      ...(stored.prompts?.personas ?? {}),
+    },
+  };
+  return merged;
 }
 
 export async function saveSettings(s: AppSettings) {

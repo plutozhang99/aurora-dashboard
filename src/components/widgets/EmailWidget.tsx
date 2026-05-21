@@ -21,6 +21,12 @@ export function EmailWidget() {
         body: JSON.stringify({
           host: settings.emailHost, port: settings.emailPort,
           user: settings.emailUser, pass: settings.emailPassword, secure: settings.emailSecure,
+          mode: settings.emailImportanceMode,
+          keywords: settings.emailImportanceKeywords,
+          ai: settings.aiProvider !== 'none' && settings.aiApiKey
+            ? { provider: settings.aiProvider, apiKey: settings.aiApiKey, model: settings.aiModel }
+            : undefined,
+          prompt: settings.prompts.emailImportance,
         }),
       }).catch(() => ({ items: [] as EmailItem[] }));
       return res.items;
