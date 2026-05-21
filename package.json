@@ -1,0 +1,48 @@
+{
+  "name": "aurora-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Aurora — a beautiful, local-first, PWA personal AI dashboard (todo + calendar + email + weather + music + AI chat) with drag-and-drop widgets.",
+  "scripts": {
+    "dev": "concurrently -k -n web,api -c blue,magenta \"vite\" \"node --watch server/index.mjs\"",
+    "dev:web": "vite",
+    "dev:api": "node --watch server/index.mjs",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host",
+    "start": "node server/index.mjs",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.59.0",
+    "dexie": "^4.0.8",
+    "dexie-react-hooks": "^1.1.7",
+    "framer-motion": "^11.11.0",
+    "lucide-react": "^0.453.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-grid-layout": "^1.5.0",
+    "react-markdown": "^9.0.1",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@types/react-grid-layout": "^1.3.5",
+    "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.0.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "imapflow": "^1.0.166",
+    "mailparser": "^3.7.1",
+    "node-os-utils": "^1.3.7",
+    "postcss": "^8.4.47",
+    "rss-parser": "^3.13.0",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8",
+    "vite-plugin-pwa": "^0.20.5"
+  }
+}
