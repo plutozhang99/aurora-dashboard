@@ -4,8 +4,21 @@
  * different ids spread across distinct hues.
  */
 
-// A curated palette of distinct hues that read well on the dark glass UI.
-const HUES = [265, 190, 25, 130, 320, 50, 215, 0, 160, 290];
+// A curated warm editorial palette that harmonizes on the paper surface —
+// muted ember, ochre, sage, slate-blue, plum, teal and a few neighbouring
+// earth tones. Expressed as "H S% L%" triples so the values drop straight
+// into the `hsl(...)` template below.
+const PALETTE = [
+  '14 56% 50%',   // ember     #C75B39
+  '36 52% 47%',   // ochre     #B8853A
+  '70 14% 39%',   // sage      #6E7257
+  '207 15% 42%',  // slate-blue #5B6B7A
+  '327 22% 39%',  // plum      #7A4E63
+  '172 33% 36%',  // teal      #3E7A72
+  '9 47% 45%',    // brick     #A8462F
+  '44 45% 44%',   // mustard   #A28A35
+  '150 16% 38%',  // moss      #51705F
+];
 
 function hashId(id: string): number {
   let h = 2166136261;
@@ -17,6 +30,6 @@ function hashId(id: string): number {
 }
 
 export function colorForAccount(accountId: string): string {
-  const hue = HUES[hashId(accountId) % HUES.length];
-  return `hsl(${hue} 70% 62%)`;
+  const tone = PALETTE[hashId(accountId) % PALETTE.length];
+  return `hsl(${tone})`;
 }

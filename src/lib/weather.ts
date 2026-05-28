@@ -82,3 +82,28 @@ export async function reverseGeocode(query: string): Promise<{ lat: number; lon:
   if (!r) return null;
   return { lat: r.latitude, lon: r.longitude, name: `${r.name}${r.admin1 ? '·' + r.admin1 : ''}` };
 }
+
+/**
+ * Reverse-geocode a lat/lon to a human-readable city label. Uses BigDataCloud's
+ * free, key-less, browser-friendly reverse endpoint. Returns null on any
+ * failure — the caller should keep the raw coords in that case.
+ */
+export async function reverseGeocodeLatLon(lat: number, lon: number): Promise<string | null> {
+  try {
+    const url = new URL('https://api.bigdatacloud.net/data/reverse-geocode-client');
+    url.searchParams.set('latitude', String(lat));
+    url.searchParams.set('longitude', String(lon));
+    url.searchParams.set('localityLanguage', 'zh');
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    const data = await res.json();
+    const city = data?.city || data?.locality || data?.principalSubdivision;
+    const region = data?.principalSubdivision && data.principalSubdivision !== city
+      ? data.principalSubdivision
+      : '';
+    if (!city) return null;
+    return region ? `${city}·${region}` : city;
+  } catch {
+    return null;
+  }
+}

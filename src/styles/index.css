@@ -1,137 +1,310 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "@heroui/styles";
 
-:root {
-  color-scheme: dark;
-  --grid-gap: 12px;
+/* ============================================================
+   Daybreak Almanac — a warm editorial morning broadsheet.
+   Paper & ink, a single sunrise-ember accent, hairline rules,
+   Fraunces display + Hanken Grotesk body + IBM Plex Mono labels.
+   ============================================================ */
+
+/* Daybreak palette as raw CSS vars (used by inline styles + custom utilities). */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --paper:   #F4EFE6;
+  --paper-2: #EBE3D4;
+  --paper-3: #E2D7C2;
+  --card:    #FCFAF4;
+
+  --ink:   #211C17;
+  --ink-2: #5C5347;
+  --ink-3: #8A7F6E;
+  --ink-4: #A89C88;
+
+  --rule:        #DCD2C0;
+  --rule-strong: #C8BAA1;
+
+  --ember:      #C75B39;
+  --ember-deep: #A8442A;
+  --ember-soft: rgba(199, 91, 57, 0.10);
+
+  /* ── Map Daybreak palette onto HeroUI v3 semantic tokens ── */
+  --color-background:           var(--paper);
+  --color-foreground:           var(--ink);
+  --color-surface:              var(--card);
+  --color-surface-foreground:   var(--ink);
+  --color-surface-secondary:    var(--paper-2);
+  --color-surface-tertiary:     var(--paper-3);
+  --color-muted:                var(--ink-3);
+  --color-muted-foreground:     var(--ink-2);
+  --color-border:               var(--rule);
+  --color-divider:              var(--rule);
+
+  --color-primary:              var(--ember);
+  --color-primary-foreground:   #FBF8F1;
+  --color-accent:               var(--ember);
+  --color-accent-foreground:    #FBF8F1;
+  --color-default:              var(--paper-2);
+  --color-default-foreground:   var(--ink);
+  --color-secondary:            var(--paper-2);
+  --color-secondary-foreground: var(--ink);
+  --color-danger:               var(--ember-deep);
+  --color-danger-foreground:    #FBF8F1;
+  --color-success:              #6E7257;
+  --color-success-foreground:   #FBF8F1;
+  --color-warning:              #B8853A;
+  --color-warning-foreground:   var(--ink);
 }
 
-html, body, #root {
-  height: 100%;
-  width: 100%;
-  margin: 0;
+/* Expose Daybreak tokens + display fonts to Tailwind utilities. */
+@theme inline {
+  --color-paper:        var(--paper);
+  --color-paper-2:      var(--paper-2);
+  --color-paper-3:      var(--paper-3);
+  --color-card:         var(--card);
+  --color-ink:          var(--ink);
+  --color-ink-2:        var(--ink-2);
+  --color-ink-3:        var(--ink-3);
+  --color-ink-4:        var(--ink-4);
+  --color-rule:         var(--rule);
+  --color-rule-strong:  var(--rule-strong);
+  --color-ember:        var(--ember);
+  --color-ember-deep:   var(--ember-deep);
+  --color-ember-soft:   var(--ember-soft);
+  --color-ochre:        #B8853A;
+  --color-sage:         #6E7257;
+  --color-slatey:       #5B6B7A;
+  --color-plum:         #7A4E63;
+  --color-teal:         #3E7A72;
+
+  --font-sans:    "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, Cambria, serif;
+  --font-mono:    "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --shadow-card:       0 1px 2px rgba(33, 28, 23, 0.04), 0 12px 28px rgba(33, 28, 23, 0.055);
+  --shadow-card-hover: 0 2px 6px rgba(33, 28, 23, 0.06), 0 18px 42px rgba(33, 28, 23, 0.09);
 }
+
+html, body, #root { height: 100%; width: 100%; margin: 0; }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
-  background: radial-gradient(at 20% 0%, rgba(155, 92, 255, 0.18), transparent 50%),
-              radial-gradient(at 80% 100%, rgba(60, 123, 255, 0.18), transparent 50%),
-              radial-gradient(at 100% 0%, rgba(255, 107, 203, 0.12), transparent 50%),
-              #070a16;
+  font-family: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  /* paper + a soft dawn glow rising from the top edge */
+  background:
+    radial-gradient(125% 65% at 50% -12%, rgba(199, 91, 57, 0.11), transparent 60%),
+    radial-gradient(90% 55% at 88% -8%, rgba(184, 133, 58, 0.08), transparent 55%),
+    var(--paper);
+  background-attachment: fixed;
   overscroll-behavior: none;
   touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
 }
 
-/* Glass card */
-.glass {
-  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
-  border: 1px solid rgba(255,255,255,0.10);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 30px rgba(0,0,0,0.35);
-}
-.glass-hover:hover { border-color: rgba(255,255,255,0.18); }
+::selection { background: var(--ember-soft); color: var(--ink); }
 
-.gradient-text {
-  background: linear-gradient(90deg, #5cf5c4, #3ad6ff, #9b5cff, #ff6bcb);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  background-size: 300% 300%;
-  animation: shimmer 8s linear infinite;
-}
-
-/* Aurora background blobs */
-.aurora-bg::before, .aurora-bg::after {
+/* Fine paper grain laid over everything (static, cheap). */
+.paper-grain::before {
   content: '';
   position: fixed;
-  inset: -30vmax;
+  inset: 0;
   z-index: -1;
-  filter: blur(80px);
-  opacity: 0.45;
   pointer-events: none;
-}
-.aurora-bg::before {
-  background: conic-gradient(from 0deg, #9b5cff, #3c7bff, #5cf5c4, #ff6bcb, #9b5cff);
-  animation: aurora 30s ease-in-out infinite;
-}
-.aurora-bg::after {
-  background: radial-gradient(circle at 30% 30%, #3ad6ff 0%, transparent 35%),
-              radial-gradient(circle at 70% 70%, #ff6bcb 0%, transparent 35%);
-  animation: aurora 45s ease-in-out infinite reverse;
+  opacity: 0.045;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Grid layout overrides */
+/* ---- Typographic helpers (still useful alongside HeroUI components) ---- */
+.kicker {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+/* Section header: kicker on the left, meta on the right, hairline under. */
+.sec-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ---- Briefing prose (expanded morning briefing markdown) ---- */
+.prose-briefing { color: var(--ink-2); line-height: 1.7; }
+.prose-briefing h1, .prose-briefing h2, .prose-briefing h3 {
+  font-family: 'Fraunces', Georgia, serif; color: var(--ink);
+  font-weight: 600; margin: 0.6em 0 0.3em; line-height: 1.2;
+}
+.prose-briefing h2 { font-size: 1.05rem; }
+.prose-briefing h3 { font-size: 0.98rem; }
+.prose-briefing p { margin: 0 0 0.7em; }
+.prose-briefing strong { color: var(--ink); font-weight: 600; }
+.prose-briefing ul { margin: 0 0 0.7em; padding-left: 1.1em; }
+.prose-briefing li { margin: 0.15em 0; }
+.prose-briefing li::marker { color: var(--ember); }
+.prose-briefing a { color: var(--ember-deep); text-underline-offset: 2px; }
+
+/* ---- react-grid-layout overrides ---- */
 .react-grid-item.react-grid-placeholder {
-  background: rgba(155, 92, 255, 0.18) !important;
-  border: 1.5px dashed rgba(155, 92, 255, 0.5);
-  border-radius: 18px;
+  background: var(--ember-soft) !important;
+  border: 1.5px dashed rgba(199, 91, 57, 0.45);
+  border-radius: 14px;
   transition-duration: 100ms;
 }
-.react-grid-item > .react-resizable-handle {
-  background-image: none;
-}
+.react-grid-item > .react-resizable-handle { background-image: none; }
 .react-grid-item > .react-resizable-handle::after {
   content: '';
   position: absolute;
   right: 6px; bottom: 6px;
   width: 8px; height: 8px;
-  border-right: 2px solid rgba(255,255,255,0.35);
-  border-bottom: 2px solid rgba(255,255,255,0.35);
+  border-right: 2px solid var(--ink-3);
+  border-bottom: 2px solid var(--ink-3);
   border-radius: 1px;
 }
 .react-grid-item.react-draggable-dragging { z-index: 50; cursor: grabbing; }
 
-/* Slim scrollbar inside widgets */
+/* ---- Slim scrollbar inside widgets ---- */
 .scroll-area { overflow: auto; }
 .scroll-area::-webkit-scrollbar { width: 6px; height: 6px; }
-.scroll-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 99px; }
+.scroll-area::-webkit-scrollbar-thumb { background: var(--rule-strong); border-radius: 99px; }
+.scroll-area::-webkit-scrollbar-track { background: transparent; }
 
-/* Drag handle */
 .drag-handle { cursor: grab; }
 .drag-handle:active { cursor: grabbing; }
-
-/* No-scroll on the dashboard wrapper itself */
 .no-scroll { overflow: hidden; }
 
-/* Buttons */
-.btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px; border-radius: 10px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.85);
-  font-size: 13px;
-  transition: all 150ms;
-}
-.btn:hover { background: rgba(255,255,255,0.12); color: white; }
-.btn-primary {
-  background: linear-gradient(90deg, #9b5cff, #3c7bff);
-  border-color: transparent;
-  color: white;
-}
-.btn-primary:hover { filter: brightness(1.1); }
+/* ---- Staggered editorial reveal on load (skipped when reduceMotion) ---- */
+@keyframes reveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.motion-ok .reveal { animation: reveal 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.motion-ok .react-grid-item:nth-child(1)  .reveal { animation-delay: 0.02s; }
+.motion-ok .react-grid-item:nth-child(2)  .reveal { animation-delay: 0.06s; }
+.motion-ok .react-grid-item:nth-child(3)  .reveal { animation-delay: 0.10s; }
+.motion-ok .react-grid-item:nth-child(4)  .reveal { animation-delay: 0.14s; }
+.motion-ok .react-grid-item:nth-child(5)  .reveal { animation-delay: 0.18s; }
+.motion-ok .react-grid-item:nth-child(6)  .reveal { animation-delay: 0.22s; }
+.motion-ok .react-grid-item:nth-child(7)  .reveal { animation-delay: 0.26s; }
+.motion-ok .react-grid-item:nth-child(8)  .reveal { animation-delay: 0.30s; }
+.motion-ok .react-grid-item:nth-child(9)  .reveal { animation-delay: 0.34s; }
+.motion-ok .react-grid-item:nth-child(10) .reveal { animation-delay: 0.38s; }
 
-.input {
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 10px;
-  padding: 8px 12px;
-  color: white;
-  font-size: 13px;
-  width: 100%;
-  outline: none;
+/* ---- Briefing player (bottom dock) ---- */
+@keyframes slideup {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
 }
-.input:focus { border-color: #9b5cff; }
+.motion-ok .player-panel { animation: slideup 0.28s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 
-.chip {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 99px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.7);
+/* Floating music-pill briefing dock. Centered, max-width, paper-tinted with
+   a soft backdrop blur so the grid still reads behind it. */
+.player-pill {
+  width: max-content;
+  max-width: min(960px, calc(100vw - 24px));
+  padding: 7px 10px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--rule);
+  box-shadow:
+    0 1px 1px rgba(33, 28, 23, 0.04),
+    0 14px 32px rgba(33, 28, 23, 0.12);
 }
+.motion-ok .player-pill { animation: slideup 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+.player-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px; height: 32px;
+  border-radius: 9999px;
+  color: var(--ink-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+.player-icon-btn:hover:not(:disabled) {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+.player-icon-btn:active:not(:disabled) { transform: scale(0.94); }
+.player-icon-btn:disabled { opacity: 0.4; cursor: default; }
+.player-icon-btn.is-active { color: var(--ember); background: var(--ember-soft); }
+.player-icon-deco { color: var(--ink-3); cursor: default; }
+.player-icon-deco:hover { background: transparent; color: var(--ink-3); }
+
+.player-play {
+  display: inline-grid;
+  place-items: center;
+  width: 38px; height: 38px;
+  margin: 0 2px;
+  border-radius: 9999px;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+.player-play:hover:not(:disabled) { background: var(--paper-2); }
+.player-play:active:not(:disabled) { transform: scale(0.94); }
+.player-play:disabled { opacity: 0.4; cursor: default; }
+
+.player-art {
+  width: 38px; height: 38px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--ember-deep);
+  background:
+    radial-gradient(120% 120% at 25% 15%, rgba(255, 220, 180, 0.85), transparent 60%),
+    linear-gradient(135deg, var(--ember-soft), color-mix(in srgb, var(--ember) 22%, var(--paper)));
+  border: 1px solid var(--rule);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.player-title {
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  min-width: 180px;
+}
+.player-title:hover:not(:disabled) { background: var(--paper-2); }
+.player-title:disabled { cursor: default; }
+
+/* Equalizer — animated bars next to the play button while TTS is speaking. */
+.eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
+.eq i {
+  display: inline-block;
+  width: 2.5px; height: 3px; border-radius: 1px;
+  background: var(--ember);
+}
+.motion-ok .eq i { animation: eqbar 0.9s ease-in-out infinite; }
+.motion-ok .eq i:nth-child(2) { animation-delay: 0.12s; }
+.motion-ok .eq i:nth-child(3) { animation-delay: 0.24s; }
+.motion-ok .eq i:nth-child(4) { animation-delay: 0.36s; }
+@keyframes eqbar { 0%, 100% { height: 3px; } 50% { height: 14px; } }
+
+/* Lyrics — the expanded briefing text inside the player panel. */
+.lyrics {
+  font-family: 'Fraunces', Georgia, Cambria, serif;
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.85;
+}
+.lyrics p { margin: 0 0 0.85em; }
+.lyrics p:last-child { margin-bottom: 0; }
+.lyrics strong { font-weight: 600; }
+.lyrics h1, .lyrics h2, .lyrics h3 { font-weight: 600; margin: 0.7em 0 0.35em; line-height: 1.25; }
+.lyrics h2 { font-size: 1.15em; }
+.lyrics h3 { font-size: 1.05em; }
+.lyrics ul { padding-left: 1.15em; margin: 0 0 0.85em; }
+.lyrics li { margin: 0.2em 0; }
+.lyrics li::marker { color: var(--ember); }
+.lyrics a { color: var(--ember-deep); text-underline-offset: 2px; }

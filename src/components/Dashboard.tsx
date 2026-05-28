@@ -51,7 +51,7 @@ export function Dashboard() {
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 pt-12 pb-2 px-3 overflow-hidden"
+      className="absolute inset-0 pt-12 pb-[88px] px-3 overflow-hidden"
     >
       <RGL
         className="layout"

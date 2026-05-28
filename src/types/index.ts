@@ -1,11 +1,11 @@
 export type WidgetType =
-  | 'clock'
-  | 'weather'
+  | 'now' // current date + time + weather
   | 'calendar'
   | 'email'
   | 'todo'
-  | 'news'
-  | 'briefing';
+  | 'news';
+// Note: the briefing isn't a grid widget — it's an always-on bottom dock
+// (BriefingPlayer) so it stays out of the layout/catalog.
 
 export interface WidgetInstance {
   id: string;

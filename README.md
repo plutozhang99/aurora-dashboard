@@ -17,7 +17,7 @@
 - **本地优先** — 设置、布局、待办、晨报缓存全部存浏览器 IndexedDB；**IMAP 密码与 AI Key 不离开本机**。
 - **AI 可选** — 配置 Anthropic / OpenAI key 后，邮件重要性判定、日程抽取、待办识别、晨报总结都走 LLM；**未配置则自动降级为关键词 / 结构化拼接**，功能不缺失。
 - **天气** — Open-Meteo，无需 API key。
-- **美** — Glass-morphism + 极光渐变背景 + Inter / Space Grotesk。
+- **美 · Daybreak Almanac** — 暖色「晨报年鉴」编辑风：纸张暖底 + 浓墨文字 + 日出赤陶点缀，发丝线分隔，Fraunces 衬线标题 + Hanken Grotesk 正文 + IBM Plex Mono 数字/标签；登场时卡片错峰淡入。
 
 > 自 v0.2 起移除了音乐播放器、系统占用、AI 用量、AI 聊天四个 widget，并把后端从 Node/Express 重写为 Python/FastAPI（`/api` HTTP 契约保持不变）。
 

@@ -53,6 +53,9 @@ export const useStore = create<DataState>((set, get) => ({
   },
   addWidget: async (w, item) => {
     const cur = get().layout;
+    // Widgets are singletons — each type appears at most once. Adding a type
+    // that's already present is a no-op (the settings catalog toggles show/hide).
+    if (cur.widgets.some((x) => x.type === w.type)) return;
     const widgets = [...cur.widgets, w];
     const layouts = { ...cur.layouts };
     (['lg', 'md', 'sm', 'xs'] as Breakpoint[]).forEach((bp) => {
@@ -98,16 +101,18 @@ export const useStore = create<DataState>((set, get) => ({
 
 // Widget category weights and max heights — drives column distribution.
 // MAX_H prevents a single widget from being stretched past a useful height
-// (e.g. clock / weather have a fixed-height layout and look empty if too tall).
+// (e.g. the "now" banner looks empty if it's stretched).
 const WEIGHT: Record<string, number> = {
-  briefing: 1,
-  clock: 1, weather: 2,
+  now: 2,
   calendar: 2, todo: 2, email: 2, news: 2,
 };
+// Only the "now" banner has a real height cap (large type but bounded).
+// The list widgets scroll, so they're effectively uncapped — this lets a column
+// holding a single list widget stretch to fill the viewport (no trailing gap
+// after "填满").
 const MAX_H: Record<string, number> = {
-  briefing: 4,
-  clock: 5, weather: 7,
-  calendar: 12, todo: 12, email: 12, news: 12,
+  now: 6,
+  calendar: 99, todo: 99, email: 99, news: 99,
 };
 
 /**

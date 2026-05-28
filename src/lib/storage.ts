@@ -202,60 +202,49 @@ export function reconcileLayout(persisted: DashboardLayout | null): DashboardLay
 }
 
 export const DEFAULT_LAYOUT: DashboardLayout = {
-  // Order matters for single-column (sm/xs) flow: briefing banner first, then
-  // the email-centric stack (design §1 & §6).
+  // Order matters for single-column (sm/xs) flow: the "now" hero (time +
+  // date + weather) first, then the email-centric stack. The briefing is a
+  // separate always-on bottom dock (BriefingPlayer), not a grid widget.
   widgets: [
-    { id: 'w-briefing', type: 'briefing' },
+    { id: 'w-now', type: 'now' },
     { id: 'w-calendar', type: 'calendar' },
-    { id: 'w-clock', type: 'clock' },
-    { id: 'w-weather', type: 'weather' },
     { id: 'w-email', type: 'email' },
     { id: 'w-todo', type: 'todo' },
     { id: 'w-news', type: 'news' },
   ] as WidgetInstance[],
   layouts: {
-    // lg (12 cols): briefing full-width banner on top; then
-    // calendar + clock + weather row; email + todo row; news full-width bottom.
+    // lg (12 cols): daybreak hero banner on top; calendar + email + todo row;
+    // news full-width bottom.
     lg: [
-      { i: 'w-briefing',    x: 0, y: 0,  w: 12, h: 3, minW: 6, minH: 2 },
-      { i: 'w-calendar',    x: 0, y: 3,  w: 5,  h: 6, minW: 3, minH: 4 },
-      { i: 'w-clock',       x: 5, y: 3,  w: 4,  h: 4, minW: 3, minH: 3 },
-      { i: 'w-weather',     x: 9, y: 3,  w: 3,  h: 4, minW: 3, minH: 3 },
-      { i: 'w-email',       x: 0, y: 9,  w: 6,  h: 6, minW: 3, minH: 4 },
-      { i: 'w-todo',        x: 6, y: 9,  w: 6,  h: 6, minW: 3, minH: 4 },
-      { i: 'w-news',        x: 0, y: 15, w: 12, h: 4, minW: 4, minH: 3 },
+      { i: 'w-now',    x: 0, y: 0,  w: 12, h: 4, minW: 6, minH: 3 },
+      { i: 'w-calendar',    x: 0, y: 4,  w: 4,  h: 7, minW: 3, minH: 4 },
+      { i: 'w-email',       x: 4, y: 4,  w: 4,  h: 7, minW: 3, minH: 4 },
+      { i: 'w-todo',        x: 8, y: 4,  w: 4,  h: 7, minW: 3, minH: 4 },
+      { i: 'w-news',        x: 0, y: 11, w: 12, h: 4, minW: 4, minH: 3 },
     ],
-    // md (8 cols): briefing banner; clock + weather one row;
-    // calendar/email/todo two-column; news full width (design §6).
+    // md (8 cols): daybreak banner; calendar/email two-column; todo/news row.
     md: [
-      { i: 'w-briefing',    x: 0, y: 0,  w: 8, h: 3, minW: 4, minH: 2 },
-      { i: 'w-clock',       x: 0, y: 3,  w: 4, h: 3, minW: 3, minH: 3 },
-      { i: 'w-weather',     x: 4, y: 3,  w: 4, h: 3, minW: 3, minH: 3 },
-      { i: 'w-calendar',    x: 0, y: 6,  w: 4, h: 6, minW: 3, minH: 4 },
-      { i: 'w-email',       x: 4, y: 6,  w: 4, h: 6, minW: 3, minH: 4 },
-      { i: 'w-todo',        x: 0, y: 12, w: 4, h: 5, minW: 3, minH: 4 },
-      { i: 'w-news',        x: 4, y: 12, w: 4, h: 5, minW: 3, minH: 4 },
+      { i: 'w-now',    x: 0, y: 0,  w: 8, h: 4, minW: 4, minH: 3 },
+      { i: 'w-calendar',    x: 0, y: 4,  w: 4, h: 6, minW: 3, minH: 4 },
+      { i: 'w-email',       x: 4, y: 4,  w: 4, h: 6, minW: 3, minH: 4 },
+      { i: 'w-todo',        x: 0, y: 10, w: 4, h: 5, minW: 3, minH: 4 },
+      { i: 'w-news',        x: 4, y: 10, w: 4, h: 5, minW: 3, minH: 4 },
     ],
-    // sm (6 cols): single column. Order = briefing → calendar → email → todo
-    // → news → clock → weather (design §6).
+    // sm (6 cols): single column. Order = daybreak → calendar → email → todo → news.
     sm: [
-      { i: 'w-briefing',    x: 0, y: 0,  w: 6, h: 3, minW: 4, minH: 2 },
-      { i: 'w-calendar',    x: 0, y: 3,  w: 6, h: 5, minW: 4, minH: 4 },
-      { i: 'w-email',       x: 0, y: 8,  w: 6, h: 5, minW: 4, minH: 4 },
-      { i: 'w-todo',        x: 0, y: 13, w: 6, h: 4, minW: 4, minH: 3 },
-      { i: 'w-news',        x: 0, y: 17, w: 6, h: 4, minW: 4, minH: 3 },
-      { i: 'w-clock',       x: 0, y: 21, w: 6, h: 3, minW: 4, minH: 3 },
-      { i: 'w-weather',     x: 0, y: 24, w: 6, h: 3, minW: 4, minH: 3 },
+      { i: 'w-now',    x: 0, y: 0,  w: 6, h: 5, minW: 4, minH: 4 },
+      { i: 'w-calendar',    x: 0, y: 5,  w: 6, h: 5, minW: 4, minH: 4 },
+      { i: 'w-email',       x: 0, y: 10, w: 6, h: 5, minW: 4, minH: 4 },
+      { i: 'w-todo',        x: 0, y: 15, w: 6, h: 4, minW: 4, minH: 3 },
+      { i: 'w-news',        x: 0, y: 19, w: 6, h: 4, minW: 4, minH: 3 },
     ],
     // xs (4 cols): single column, same order as sm.
     xs: [
-      { i: 'w-briefing',    x: 0, y: 0,  w: 4, h: 3, minW: 4, minH: 2 },
-      { i: 'w-calendar',    x: 0, y: 3,  w: 4, h: 5, minW: 4, minH: 4 },
-      { i: 'w-email',       x: 0, y: 8,  w: 4, h: 5, minW: 4, minH: 4 },
-      { i: 'w-todo',        x: 0, y: 13, w: 4, h: 4, minW: 4, minH: 3 },
-      { i: 'w-news',        x: 0, y: 17, w: 4, h: 4, minW: 4, minH: 3 },
-      { i: 'w-clock',       x: 0, y: 21, w: 4, h: 3, minW: 4, minH: 3 },
-      { i: 'w-weather',     x: 0, y: 24, w: 4, h: 3, minW: 4, minH: 3 },
+      { i: 'w-now',    x: 0, y: 0,  w: 4, h: 5, minW: 4, minH: 4 },
+      { i: 'w-calendar',    x: 0, y: 5,  w: 4, h: 5, minW: 4, minH: 4 },
+      { i: 'w-email',       x: 0, y: 10, w: 4, h: 5, minW: 4, minH: 4 },
+      { i: 'w-todo',        x: 0, y: 15, w: 4, h: 4, minW: 4, minH: 3 },
+      { i: 'w-news',        x: 0, y: 19, w: 4, h: 4, minW: 4, minH: 3 },
     ],
   },
 };

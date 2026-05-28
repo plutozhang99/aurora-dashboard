@@ -23,9 +23,7 @@ describe('reconcileLayout', () => {
   it('preserves a valid new-schema layout unchanged (identity)', () => {
     const valid: DashboardLayout = {
       widgets: [
-        { id: 'w-briefing', type: 'briefing' },
-        { id: 'w-clock', type: 'clock' },
-        { id: 'w-weather', type: 'weather' },
+        { id: 'w-now', type: 'now' },
         { id: 'w-calendar', type: 'calendar' },
         { id: 'w-email', type: 'email' },
         { id: 'w-todo', type: 'todo' },
