@@ -9,3 +9,9 @@ dist-ssr
 .env.*.local
 *.log
 *.tsbuildinfo
+
+# Python backend
+**/.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/

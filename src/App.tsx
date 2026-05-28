@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { TopBar } from './components/TopBar';
 import { SettingsPanel } from './components/SettingsPanel';
-import { ChatDrawer } from './components/ChatDrawer';
 import { useStore, useUI } from './lib/store';
 
 export default function App() {
@@ -10,7 +9,6 @@ export default function App() {
   const ready = useStore((s) => s.ready);
   const settings = useStore((s) => s.settings);
   const settingsOpen = useUI((s) => s.settingsOpen);
-  const chatOpen = useUI((s) => s.chatOpen);
 
   useEffect(() => { init(); }, [init]);
 
@@ -19,7 +17,6 @@ export default function App() {
       <TopBar />
       {ready ? <Dashboard /> : <BootSplash />}
       {settingsOpen && <SettingsPanel />}
-      {chatOpen && <ChatDrawer />}
     </div>
   );
 }

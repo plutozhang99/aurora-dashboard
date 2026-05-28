@@ -1,97 +1,112 @@
 # Aurora Dashboard
 
-> 一个本地优先的个人 AI 仪表盘 — todo + calendar + email + 天气 + 系统 + 新闻 + 音乐 + AI 聊天，全部以 widget 形式可拖拽布局，PWA 安装到桌面/iPad 即可全屏使用。
+> 一个本地优先、以**邮件为中心的晨间指挥台** — 晨间语音播报 + 多账户重要邮件聚合 + 今日日程 + 邮件待办建议 + 天气 + 新闻，全部以可拖拽 widget 布局，PWA 安装到桌面 / iPad 即可全屏使用。
 
 ![aurora](public/favicon.svg)
 
+前端 React + Vite + PWA；后端 **Python / FastAPI**（必需）。凭据只存浏览器本机。
+
 ## 特性
 
-- **十个 widget 即开即用** — 时钟、天气、今日日程、重要邮件、Todo、系统占用、新闻、音乐播放器、AI 聊天、AI Agent 用量
-- **拖拽布局** — react-grid-layout，4 个断点 (lg/md/sm/xs) 各自记忆
-- **横屏 iPad 无滚动** — `rowHeight` 根据视口高度动态计算，所有 widget 都能塞进一屏
-- **PWA** — 添加到主屏后全屏运行，强制横屏 `display: standalone`
-- **完全本地** — 设置、布局、todo、音乐文件全部存浏览器 IndexedDB；密码不会离开本机
-- **可选后端** — `npm run dev` 同时启动一个 127.0.0.1:5174 的 Express 服务，负责浏览器拿不到的能力：IMAP 邮件、系统占用、RSS、Claude/Codex 本地用量缓存读取
-- **AI 聊天换风格** — 内置 5 种 persona（精炼/温柔/严师/段子手/哲思），随时切换
-- **音乐"蒸馏"推荐** — 给喜欢的曲子点心，下次自动加权排队
-- **天气** — Open-Meteo，无需 API key
-- **美** — Glass-morphism + 极光渐变背景 + Inter / Space Grotesk
+- **🌅 晨间播报** — 首屏顶部一张通栏卡片：聚合重要邮件 + 今日日程 + 新闻偏好源，经 AI 总结成一段口语化简报；**语音优先**（默认浏览器 TTS），文本默认折叠手动展开。当天首次打开、已过设定的清晨时间且当天未生成时自动生成；可手动「重新生成」，每天至多缓存一份。
+- **📬 多账户邮件聚合** — 任意数量 IMAP 账户增删改、独立启用；重要邮件跨所有启用账户**合并、去重、时间倒序**为一个统一列表，来源用轻量色点标识（悬停显账户名），不按账户分栏。单账户失败被隔离，不影响其余。
+- **💡 邮件待办建议** — AI（或关键词降级）从邮件识别「可能的待办」进入独立建议区，一键「确认」转为正式待办（保留邮件来源链接）或「忽略」；默认不污染正式待办。
+- **🕐 六个核心 widget** — 晨间播报、今日日程、重要邮件、待办、新闻、时钟、天气。
+- **拖拽布局** — react-grid-layout，4 个断点 (lg/md/sm/xs) 各自记忆；横屏 iPad 无滚动一屏。
+- **PWA** — 添加到主屏后全屏运行，强制横屏 `display: standalone`。
+- **本地优先** — 设置、布局、待办、晨报缓存全部存浏览器 IndexedDB；**IMAP 密码与 AI Key 不离开本机**。
+- **AI 可选** — 配置 Anthropic / OpenAI key 后，邮件重要性判定、日程抽取、待办识别、晨报总结都走 LLM；**未配置则自动降级为关键词 / 结构化拼接**，功能不缺失。
+- **天气** — Open-Meteo，无需 API key。
+- **美** — Glass-morphism + 极光渐变背景 + Inter / Space Grotesk。
 
-## 快速开始
+> 自 v0.2 起移除了音乐播放器、系统占用、AI 用量、AI 聊天四个 widget，并把后端从 Node/Express 重写为 Python/FastAPI（`/api` HTTP 契约保持不变）。
+
+## 快速开始（本地开发）
+
+需要 **Node ≥ 18** 与 **Python ≥ 3.11**。后端不再可选——前后端一起启动。
 
 ```bash
 cd ~/Documents/aurora-dashboard
+
+# 前端依赖
 npm install
+
+# 后端依赖（一次性）
+python3 -m venv backend/.venv
+backend/.venv/bin/pip install -e 'backend[dev]'
+
+# 同时启动 vite(:5173) + uvicorn(:5174)
 npm run dev
 ```
 
-打开 http://localhost:5173/ — 一切配置在 UI 内完成（右上角「设置」）。
+打开 http://localhost:5173/ — 一切配置在 UI 内完成（右上角「设置」）：添加 IMAP 账户、填 AI key、选清晨时间与语音引擎、编辑提示词。
 
-构建生产版：
+> `npm run dev` 通过 `backend/.venv/bin/uvicorn` 启动后端（需先按上面创建好 `backend/.venv`），并用 vite 把 `/api` 代理到 `127.0.0.1:5174`。若后端未运行，依赖后端的区域（播报 / 邮件 / 日程）会显式提示「本地后端未运行」而非空白。
+>
+> Windows 用户：venv 的可执行文件在 `backend\.venv\Scripts\`，把 `dev:api` 脚本里的 `backend/.venv/bin/uvicorn` 改成 `backend\.venv\Scripts\uvicorn` 即可。
+
+## 部署（Docker，单镜像）
+
+最省事的方式是单镜像多阶段构建（前端 `vite build` → Python 运行时托管 `dist/` + `/api`，单端口）：
 
 ```bash
-npm run build
-npm run preview -- --host        # http://本机IP:4173
+docker compose up --build      # 然后打开 http://localhost:5174/
 ```
 
-把 `http://本机IP:4173` 在 iPad Safari 打开，「分享 → 添加到主屏幕」即获得 PWA。
+详见 [docs/DEPLOY.md](docs/DEPLOY.md)（端口、env、数据存储、PWA 安装）。
+
+## 测试
+
+```bash
+npm test                              # 前端纯逻辑（Vitest）：迁移、触发时序、来源取色、建议存储
+backend/.venv/bin/pytest backend/tests -q   # 后端（pytest）：聚合/去重/隔离/分类/降级
+```
+
+后端测试不触网：IMAP 收取与 LLM 层均被注入 / monkeypatch。
 
 ## 目录结构
 
 ```
 src/
-  App.tsx                    顶级布局，根据 ready/编辑模式渲染
-  main.tsx                   入口 + React Query
+  App.tsx / main.tsx          入口 + React Query
   components/
-    Dashboard.tsx            react-grid-layout 容器 + 动态行高
-    WidgetWrapper.tsx        玻璃卡片 + 拖拽手柄 + 删除按钮
-    TopBar.tsx               顶部工具栏
-    SettingsPanel.tsx        全部 UI 配置
-    ChatDrawer.tsx           右侧 AI 聊天抽屉
-    widgets/                 十个 widget 实现
+    Dashboard.tsx             react-grid-layout 容器 + 动态行高
+    WidgetWrapper.tsx         玻璃卡片 + 拖拽手柄 + 删除
+    TopBar.tsx / SettingsPanel.tsx
+    widgets/                  briefing / calendar / email / todo / news / clock / weather
   lib/
-    store.ts                 zustand state
-    storage.ts               Dexie / IndexedDB + 默认布局
-    api.ts                   后端 fetch 帮助
-    ai.ts                    Anthropic / OpenAI 浏览器直连
-    weather.ts               Open-Meteo client
-  types/index.ts             全局类型 + persona 定义
-server/
-  index.mjs                  Express 入口
-  routes/
-    system.mjs               CPU / 内存
-    news.mjs                 RSS 聚合
-    email.mjs                IMAP 重要邮件 + 日程抽取
-    agents.mjs               Claude/Codex 本地缓存解析
-    ai.mjs                   AI 聊天反向代理（CORS 兜底）
+    store.ts                  zustand state + 布局权重
+    storage.ts                Dexie / IndexedDB + 默认布局 + 多账户迁移 + 晨报缓存
+    api.ts                    后端 fetch 帮助（apiAvailable 判后端是否在线）
+    accountColors.ts          来源账户取色
+    imapConfig.ts             常见邮箱 host/port 推断
+    tts.ts                    可插拔语音引擎（v1 浏览器 Web Speech）
+    briefingTrigger.ts        清晨自动生成触发判定（纯函数）
+    weather.ts                Open-Meteo client
+  types/index.ts              全局类型 + 默认设置 + 默认提示词
+backend/                      Python / FastAPI（见 backend/README.md）
+  app/{main,config,models}.py
+  app/routers/{health,news,email,briefing}.py
+  app/services/{imap,classify,briefing,news,llm}.py
+  tests/                      pytest 套件
+Dockerfile / docker-compose.yml / .dockerignore
 ```
-
-## 关于 Claude Code / Codex 用量
-
-Aurora 只读取 CLI 自己写在本地 (`~/.claude`, `~/.codex`) 的会话/项目文件，
-**不**调用未公开的内部端点抓取 quota。这种做法符合 Anthropic Usage Policy（你只在读取自己机器上的本地文件）。
-
-如果你想要"还剩多少消息 / 多久重置"这种精确指标，目前只能：
-
-1. CLI 内执行 `/status` 或 `/usage`，把结果记下
-2. 在组件内手动输入（仍可显示倒计时）
-
-绕过官方策略去 scrape token、模拟 web UI 调用，可能触发账号风控 — Aurora 默认拒绝这种实现。
 
 ## 安全 / 隐私
 
-- 所有凭据（IMAP 密码、AI API Key）保存在浏览器 IndexedDB，未发往任何远端
-- 本地后端只监听 `127.0.0.1`
-- 邮件请使用 Gmail App Password（两步验证 → 应用专用密码）
-- 想真正稳一点：把整个项目跑在你的 NAS / 树莓派，然后用 Tailscale/Cloudflare Tunnel 访问
+- 所有凭据（IMAP 密码、AI API Key）保存在**浏览器 IndexedDB**，仅随请求体发往你自己的本地后端，不发往任何第三方。
+- 后端本身不持久化任何凭据；AI key / 邮箱密码只在请求体里短暂存在；进程内 TTL 缓存（6h）只缓存判定结果。
+- Dev 后端绑定 `127.0.0.1`；Docker 内绑定 `0.0.0.0` 但应只暴露在你信任的网络。
+- 邮件请使用 **Gmail 应用专用密码**（两步验证 → App Password），不要用主密码。
+- 想稳定常驻：把整个项目跑在你的 NAS / 树莓派，再用 Tailscale / Cloudflare Tunnel 访问。
 
 ## 路线图 / 未完成
 
-- Spotify OAuth + Web Playback SDK（settings 里已有入口，需要补 `/api/spotify/*` 路由）
-- Google Calendar / Outlook ICS 直接接入（目前从邮件抽日程）
-- 多 dashboard 切换 / 主题预设
-- 国际化（当前默认中文，组件内文本独立）
+- 云端 TTS 适配器（已留可插拔接口，v1 仅浏览器 TTS）。
+- 线程级邮件去重（v1 按 Message-ID + 回退键）。
+- Google Calendar / Outlook ICS 直接接入（目前从邮件抽日程）。
+- 国际化（当前默认中文）。
 
 ## License
 
-MIT
+MIT — 见 [LICENSE](LICENSE)。

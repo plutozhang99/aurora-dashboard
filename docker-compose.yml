@@ -1,0 +1,24 @@
+services:
+  aurora:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: aurora-dashboard
+    container_name: aurora-dashboard
+    ports:
+      - "5174:5174"
+    environment:
+      AURORA_HOST: "0.0.0.0"
+      AURORA_PORT: "5174"
+      AURORA_DIST_DIR: "/app/dist"
+      AURORA_IMAP_CONCURRENCY: "3"
+    restart: unless-stopped
+    # Settings & credentials live in the browser's IndexedDB (single-user,
+    # local-first). The container holds no persistent mailbox credentials; the
+    # TTL cache is in-process. The named volume below is optional and unused by
+    # default — kept for future server-side state.
+    volumes:
+      - aurora-data:/app/data
+
+volumes:
+  aurora-data:

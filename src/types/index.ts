@@ -4,11 +4,8 @@ export type WidgetType =
   | 'calendar'
   | 'email'
   | 'todo'
-  | 'system'
   | 'news'
-  | 'music'
-  | 'chat'
-  | 'agent-usage';
+  | 'briefing';
 
 export interface WidgetInstance {
   id: string;
@@ -40,6 +37,26 @@ export interface TodoItem {
   done: boolean;
   dueDate?: string;
   createdAt: number;
+  /** When this todo was confirmed from an email suggestion, the source email refs. */
+  sourceEmailId?: string;
+  sourceAccountId?: string;
+  sourceSubject?: string;
+}
+
+/**
+ * An AI/keyword-derived actionable to-do extracted from an email. Lives in the
+ * separate `suggestions` store until the user confirms (→ a real TodoItem) or
+ * ignores it (→ dismissed marker, never resurfaces).
+ */
+export interface TodoSuggestion {
+  id: string;
+  text: string;
+  sourceAccountId: string;
+  sourceEmailId: string;
+  from: string;
+  subject: string;
+  /** Locally set when the user ignores the suggestion; persisted so it stays hidden. */
+  dismissed?: boolean;
 }
 
 export interface EmailItem {
@@ -50,6 +67,14 @@ export interface EmailItem {
   receivedAt: number;
   important: boolean;
   dismissed: boolean;
+  /** Account this item was aggregated from (`m-{accountId}-{uid}` namespace). */
+  sourceAccountId?: string;
+}
+
+/** A non-fatal per-account failure surfaced by aggregated endpoints. */
+export interface AccountError {
+  accountId: string;
+  message: string;
 }
 
 export interface NewsItem {
@@ -61,12 +86,26 @@ export interface NewsItem {
 }
 
 export interface PromptOverrides {
-  /** Per-persona system prompt; key = persona id. Missing keys fall back to DEFAULT_PROMPTS.personas[id]. */
-  personas: Record<string, string>;
   /** Prompt for classifying which inbox emails are important. */
   emailImportance: string;
   /** Prompt for extracting today's scheduled events from emails. */
   scheduleExtract: string;
+  /** Prompt for extracting actionable to-dos from emails. */
+  emailTodo: string;
+  /** Prompt for generating the spoken morning briefing. */
+  briefingSummary: string;
+}
+
+/** One IMAP account. Credentials are persisted only to the local IndexedDB. */
+export interface EmailAccount {
+  id: string;
+  label?: string;
+  enabled: boolean;
+  host: string;
+  port: number;
+  user: string;
+  password: string; // stored locally only
+  secure: boolean;
 }
 
 export interface AppSettings {
@@ -79,26 +118,22 @@ export interface AppSettings {
   // News
   newsFeeds: string[];
 
-  // Email (IMAP)
-  emailEnabled: boolean;
-  emailHost: string;
-  emailPort: number;
-  emailUser: string;
-  emailPassword: string; // stored locally only
-  emailSecure: boolean;
+  // Email (IMAP) — multiple accounts, aggregated by the backend.
+  emailAccounts: EmailAccount[];
 
   // AI provider
   aiProvider: 'anthropic' | 'openai' | 'none';
   aiApiKey: string;
   aiModel: string;
-  aiPersona: string; // current chat persona id
-
-  // Music: Spotify integration (optional)
-  spotifyClientId: string;
-  spotifyEnabled: boolean;
 
   // Server URL (optional, blank = same origin /api)
   serverUrl: string;
+
+  // Morning briefing
+  /** Earliest local time the briefing auto-generates on first open, "HH:MM". */
+  morningTime: string;
+  /** TTS engine for reading the briefing aloud. 'cloud' reserved (not yet implemented). */
+  ttsEngine: 'browser' | 'cloud';
 
   // Theme
   reduceMotion: boolean;
@@ -125,19 +160,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
     'https://hnrss.org/frontpage',
     'https://www.theverge.com/rss/index.xml',
   ],
-  emailEnabled: false,
-  emailHost: 'imap.gmail.com',
-  emailPort: 993,
-  emailUser: '',
-  emailPassword: '',
-  emailSecure: true,
+  emailAccounts: [],
   aiProvider: 'none',
   aiApiKey: '',
   aiModel: 'claude-sonnet-4-6',
-  aiPersona: 'crisp',
-  spotifyClientId: '',
-  spotifyEnabled: false,
   serverUrl: '',
+  morningTime: '06:00',
+  ttsEngine: 'browser',
   reduceMotion: false,
   accent: '#9b5cff',
   // Filled in below once DEFAULT_PROMPTS is declared (TS hoisting note: this property is set via Object.assign on next line).
@@ -158,54 +187,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 export const DEFAULT_EMAIL_KEYWORDS = [...DEFAULT_SETTINGS.emailImportanceKeywords];
 export const DEFAULT_SCHEDULE_KEYWORDS = [...DEFAULT_SETTINGS.scheduleHintKeywords];
 
-export interface ChatPersona {
-  id: string;
-  name: string;
-  emoji: string;
-  /** Default system prompt — may be overridden by settings.prompts.personas[id]. */
-  systemPrompt: string;
-}
-
-export const PERSONAS: ChatPersona[] = [
-  {
-    id: 'crisp',
-    name: '精炼助理',
-    emoji: '⚡',
-    systemPrompt:
-      '你是一位极度简洁的助理。回答始终言简意赅、信息密集，不啰嗦、不寒暄、不重复用户的话。\n- 直接给结论，再按需补充关键论据。\n- 列表优先于段落，能省的词全部省掉。\n- 不确定的地方坦诚说明，不要编造。',
-  },
-  {
-    id: 'warm',
-    name: '温柔朋友',
-    emoji: '🌸',
-    systemPrompt:
-      '你是一位温柔体贴的朋友。耐心倾听、给予共情，再给出温暖且务实的建议。\n- 先承接对方的情绪，再回应内容。\n- 不评判、不说教，鼓励对方按自己的节奏做决定。\n- 建议要具体、可执行，避免空泛的安慰话术。',
-  },
-  {
-    id: 'mentor',
-    name: '严师',
-    emoji: '🧠',
-    systemPrompt:
-      '你是一位严谨的导师。指出错误，给出系统化的解决思路，要求高，反馈直接但不刻薄。\n- 先指出关键问题与其根因，再给出可执行的改进路径。\n- 鼓励对方自己推导而不是直接喂答案，必要时给出"下一步该如何思考"的提示。\n- 拒绝糊弄式回答；不确定时清楚说明边界。',
-  },
-  {
-    id: 'jester',
-    name: '段子手',
-    emoji: '🃏',
-    systemPrompt:
-      '你是一位幽默的段子手。用机智、双关与轻松的语气回应，但不牺牲信息准确性。\n- 信息准确性 > 笑点；笑点服务于让回答更易记。\n- 避免冒犯性、政治敏感或针对个人的玩笑。\n- 严肃问题（健康、法律、安全）切回正经语气。',
-  },
-  {
-    id: 'philosopher',
-    name: '哲思',
-    emoji: '🌌',
-    systemPrompt:
-      '你是一位思辨型对话者。从多重视角探讨问题，引用经典思想，留出反思空间。\n- 先帮对方厘清问题本身，再讨论答案。\n- 给出至少两种立场及其各自的强论据。\n- 避免居高临下的说教，邀请对方继续思考。',
-  },
-];
-
 export const DEFAULT_PROMPTS: PromptOverrides = {
-  personas: Object.fromEntries(PERSONAS.map((p) => [p.id, p.systemPrompt])),
   emailImportance: [
     '你是一个邮件分类助手。任务：从一批最近 48 小时的收件箱邮件中挑出"重要邮件"。',
     '',
@@ -232,14 +214,32 @@ export const DEFAULT_PROMPTS: PromptOverrides = {
     '',
     '严格只输出 JSON，形如：{"events":[{"uid":<number>,"time":"HH:MM 或 —","title":"<标题>"}]}。不要输出任何额外文字。',
   ].join('\n'),
+  emailTodo: [
+    '你是一个待办抽取助手。任务：从一批最近 48 小时的收件箱邮件中，识别"需要用户去做的事"，提炼成可执行的待办项。',
+    '',
+    '抽取规则：',
+    '- 只保留真正需要用户采取行动的事项：回复/确认/提交/付款/审核/预约/准备材料/补充信息等。',
+    '- 纯通知、营销、收据、自动化摘要等无需用户操作的邮件，不产生待办。',
+    '- 每封邮件最多产出一条最关键的待办；没有可执行事项则跳过该邮件。',
+    '- 待办文案是简短的动作描述（动词开头，<= 20 个汉字/字符），不要带引号、不要加发件人前缀。',
+    '',
+    '严格只输出 JSON，形如：{"todos":[{"uid":<number>,"text":"<不超过20字的动作描述>"}]}。不要输出任何额外文字。',
+  ].join('\n'),
+  briefingSummary: [
+    '你是一位贴心的晨间播报助手。任务：把"今日日程 + 重要邮件 + 新闻摘要"整合成一段自然、口语化、适合朗读的中文晨间简报。',
+    '',
+    '输入是一个 JSON，包含 today(日期)、schedule(今日日程数组)、emails(重要邮件数组)、news(新闻数组)。',
+    '',
+    '写作要求：',
+    '- 以亲切的问候开场（如"早上好"），然后用连贯的口语叙述，而非生硬罗列。',
+    '- 先讲今日日程（几点有什么安排），再讲需要关注的重要邮件，最后用一两句概括今天值得一看的新闻。',
+    '- 简洁、自然、可朗读；避免 Markdown 符号、表情和编号列表。',
+    '- 若某类素材为空，自然跳过，不要强行提及"无数据"。',
+    '- 全部素材都为空时，给出一句轻松的早安问候即可。',
+    '',
+    '严格只输出 JSON，形如：{"text":"<可朗读的整段晨报文本>","sections":{"schedule":"...","emails":"...","news":"..."}}。sections 可选，可省略或为 null。不要输出任何额外文字。',
+  ].join('\n'),
 };
 
 // Wire prompts into DEFAULT_SETTINGS (declared before DEFAULT_PROMPTS for readability).
 DEFAULT_SETTINGS.prompts = DEFAULT_PROMPTS;
-
-/** Resolve the effective system prompt for a persona, applying user override if present. */
-export function effectivePersonaPrompt(settings: AppSettings, personaId: string): string {
-  const override = settings.prompts?.personas?.[personaId]?.trim();
-  if (override) return override;
-  return DEFAULT_PROMPTS.personas[personaId] ?? '';
-}

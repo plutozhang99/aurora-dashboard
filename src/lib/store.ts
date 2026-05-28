@@ -1,15 +1,13 @@
 import { create } from 'zustand';
 import type { AppSettings, DashboardLayout, WidgetInstance, LayoutItem, Breakpoint } from '@/types';
 import { DEFAULT_SETTINGS } from '@/types';
-import { DEFAULT_LAYOUT, loadLayout, loadSettings, saveLayout, saveSettings } from './storage';
+import { DEFAULT_LAYOUT, loadLayout, loadSettings, reconcileLayout, saveLayout, saveSettings } from './storage';
 
 interface UIState {
   settingsOpen: boolean;
   editMode: boolean;
-  chatOpen: boolean;
   setSettingsOpen: (v: boolean) => void;
   setEditMode: (v: boolean) => void;
-  setChatOpen: (v: boolean) => void;
 }
 
 interface DataState {
@@ -28,10 +26,8 @@ interface DataState {
 export const useUI = create<UIState>((set) => ({
   settingsOpen: false,
   editMode: false,
-  chatOpen: false,
   setSettingsOpen: (v) => set({ settingsOpen: v }),
   setEditMode: (v) => set({ editMode: v }),
-  setChatOpen: (v) => set({ chatOpen: v }),
 }));
 
 export const useStore = create<DataState>((set, get) => ({
@@ -40,7 +36,7 @@ export const useStore = create<DataState>((set, get) => ({
   layout: DEFAULT_LAYOUT,
   init: async () => {
     const [settings, layout] = await Promise.all([loadSettings(), loadLayout()]);
-    set({ settings, layout: layout ?? DEFAULT_LAYOUT, ready: true });
+    set({ settings, layout: reconcileLayout(layout), ready: true });
   },
   updateSettings: async (patch) => {
     const next = { ...get().settings, ...patch };
@@ -102,13 +98,15 @@ export const useStore = create<DataState>((set, get) => ({
 
 // Widget category weights and max heights — drives column distribution.
 // MAX_H prevents a single widget from being stretched past a useful height
-// (e.g. music / agent-usage have a fixed-height layout and look empty if too tall).
+// (e.g. clock / weather have a fixed-height layout and look empty if too tall).
 const WEIGHT: Record<string, number> = {
-  clock: 1, weather: 2, system: 1, 'agent-usage': 1, chat: 1,
-  calendar: 2, todo: 2, email: 2, news: 2, music: 1,
+  briefing: 1,
+  clock: 1, weather: 2,
+  calendar: 2, todo: 2, email: 2, news: 2,
 };
 const MAX_H: Record<string, number> = {
-  clock: 5, weather: 7, system: 5, 'agent-usage': 5, chat: 4, music: 6,
+  briefing: 4,
+  clock: 5, weather: 7,
   calendar: 12, todo: 12, email: 12, news: 12,
 };
 

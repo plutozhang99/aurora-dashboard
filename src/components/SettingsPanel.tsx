@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { X, PlusCircle } from 'lucide-react';
+import { X, PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { useStore, useUI } from '@/lib/store';
 import { reverseGeocode } from '@/lib/weather';
 import { WIDGET_CATALOG } from './widgets';
-import type { AppSettings, WidgetInstance, PromptOverrides } from '@/types';
-import { DEFAULT_PROMPTS, PERSONAS, DEFAULT_EMAIL_KEYWORDS, DEFAULT_SCHEDULE_KEYWORDS } from '@/types';
+import { inferImapConfig } from '@/lib/imapConfig';
+import { colorForAccount } from '@/lib/accountColors';
+import type { AppSettings, WidgetInstance, PromptOverrides, EmailAccount } from '@/types';
+import { DEFAULT_PROMPTS, DEFAULT_EMAIL_KEYWORDS, DEFAULT_SCHEDULE_KEYWORDS } from '@/types';
 
 export function SettingsPanel() {
   const setOpen = useUI((s) => s.setSettingsOpen);
@@ -15,7 +17,7 @@ export function SettingsPanel() {
 
   const [draft, setDraft] = useState<AppSettings>(settings);
   const [cityQuery, setCityQuery] = useState('');
-  const [tab, setTab] = useState<'general' | 'weather' | 'email' | 'ai' | 'prompts' | 'news' | 'music' | 'widgets'>('general');
+  const [tab, setTab] = useState<'general' | 'weather' | 'email' | 'briefing' | 'ai' | 'prompts' | 'news' | 'widgets'>('general');
 
   useEffect(() => setDraft(settings), [settings]);
 
@@ -51,7 +53,7 @@ export function SettingsPanel() {
           <button className="text-white/60 hover:text-white" onClick={() => setOpen(false)}><X /></button>
         </div>
         <div className="shrink-0 flex gap-2 px-5 py-3 mb-1 border-b border-white/10 text-sm overflow-x-auto scrollbar-thin">
-          {(['general','weather','email','ai','prompts','news','music','widgets'] as const).map((t) => (
+          {(['general','weather','email','briefing','ai','prompts','news','widgets'] as const).map((t) => (
             <button
               key={t}
               className={`shrink-0 px-3 py-1 rounded-lg focus:outline-none transition ${
@@ -95,20 +97,37 @@ export function SettingsPanel() {
             </>
           )}
           {tab === 'email' && (
+            <EmailAccountsTab
+              accounts={draft.emailAccounts}
+              onChange={(accounts) => up('emailAccounts', accounts)}
+            />
+          )}
+          {tab === 'briefing' && (
             <>
-              <Field label="启用 IMAP (需运行本地后端)">
-                <Toggle value={draft.emailEnabled} onChange={(v) => up('emailEnabled', v)} />
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="主机"><input className="input" value={draft.emailHost} onChange={(e) => up('emailHost', e.target.value)} /></Field>
-                <Field label="端口"><input className="input" type="number" value={draft.emailPort} onChange={(e) => up('emailPort', Number(e.target.value))} /></Field>
+              <div className="text-xs text-white/50">
+                晨间播报会在清晨首次打开时自动生成一次（每天仅缓存一份），整合今日日程、重要邮件与新闻，并可朗读。
               </div>
-              <Field label="用户名 / 邮箱"><input className="input" value={draft.emailUser} onChange={(e) => up('emailUser', e.target.value)} /></Field>
-              <Field label="密码 / App Password (仅保存在本机浏览器 IndexedDB)">
-                <input className="input" type="password" value={draft.emailPassword} onChange={(e) => up('emailPassword', e.target.value)} />
+              <Field label="清晨自动生成时间 (HH:MM)">
+                <input
+                  className="input"
+                  type="time"
+                  value={draft.morningTime}
+                  onChange={(e) => up('morningTime', e.target.value || '06:00')}
+                />
               </Field>
-              <Field label="使用 TLS"><Toggle value={draft.emailSecure} onChange={(v) => up('emailSecure', v)} /></Field>
-              <div className="text-xs text-white/40">Gmail 需启用「App password」(两步验证下生成)，imap.gmail.com:993。</div>
+              <Field label="语音引擎">
+                <select
+                  className="input"
+                  value={draft.ttsEngine}
+                  onChange={(e) => up('ttsEngine', e.target.value as AppSettings['ttsEngine'])}
+                >
+                  <option value="browser">浏览器内置 (免费)</option>
+                  <option value="cloud">云端 TTS (敬请期待 · 暂未实现)</option>
+                </select>
+              </Field>
+              {draft.ttsEngine === 'cloud' && (
+                <div className="text-[11px] text-amber-200/70">云端 TTS 尚未实现，当前会回退到浏览器内置语音。</div>
+              )}
             </>
           )}
           {tab === 'ai' && (
@@ -142,17 +161,6 @@ export function SettingsPanel() {
               onChange={(v) => up('newsFeeds', v.split('\n').map((s) => s.trim()).filter(Boolean))}
             />
           )}
-          {tab === 'music' && (
-            <>
-              <div className="text-sm text-white/70">音乐播放器支持两种模式：</div>
-              <ul className="text-xs text-white/60 list-disc pl-5 space-y-1">
-                <li>本地：把音频拖入播放器即可，曲库保存在浏览器内</li>
-                <li>Spotify (可选)：填入 Client ID 后使用 OAuth，可启用「从你常听歌曲蒸馏推荐」</li>
-              </ul>
-              <Field label="启用 Spotify"><Toggle value={draft.spotifyEnabled} onChange={(v) => up('spotifyEnabled', v)} /></Field>
-              <Field label="Spotify Client ID"><input className="input" value={draft.spotifyClientId} onChange={(e) => up('spotifyClientId', e.target.value)} /></Field>
-            </>
-          )}
           {tab === 'widgets' && (
             <>
               <div className="text-sm text-white/70">添加组件 — 拖拽布局请使用顶部「布局」按钮</div>
@@ -185,7 +193,7 @@ export function SettingsPanel() {
 }
 
 function tabLabel(t: string) {
-  return { general: '通用', weather: '天气', email: '邮件', ai: 'AI', prompts: '提示词', news: '新闻', music: '音乐', widgets: '组件' }[t] ?? t;
+  return { general: '通用', weather: '天气', email: '邮件', briefing: '晨报 / 语音', ai: 'AI', prompts: '提示词', news: '新闻', widgets: '组件' }[t] ?? t;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -194,6 +202,210 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <div className="text-xs text-white/60 mb-1">{label}</div>
       {children}
     </label>
+  );
+}
+
+// ── Email accounts ────────────────────────────────────────────────────────
+
+type AccountFormState = {
+  id: string | null; // null = adding a new account; otherwise editing
+  label: string;
+  user: string;
+  password: string;
+  host: string;
+  port: number;
+  secure: boolean;
+  advancedOpen: boolean;
+};
+
+function emptyForm(): AccountFormState {
+  return { id: null, label: '', user: '', password: '', host: '', port: 993, secure: true, advancedOpen: false };
+}
+
+function EmailAccountsTab({
+  accounts,
+  onChange,
+}: {
+  accounts: EmailAccount[];
+  onChange: (accounts: EmailAccount[]) => void;
+}) {
+  const [form, setForm] = useState<AccountFormState | null>(null);
+
+  function toggleEnabled(id: string) {
+    onChange(accounts.map((a) => (a.id === id ? { ...a, enabled: !a.enabled } : a)));
+  }
+
+  function remove(id: string) {
+    onChange(accounts.filter((a) => a.id !== id));
+    if (form?.id === id) setForm(null);
+  }
+
+  function startAdd() {
+    setForm(emptyForm());
+  }
+
+  function startEdit(a: EmailAccount) {
+    setForm({
+      id: a.id,
+      label: a.label ?? '',
+      user: a.user,
+      password: '', // write-only: never echo the stored password back
+      host: a.host,
+      port: a.port,
+      secure: a.secure,
+      advancedOpen: true,
+    });
+  }
+
+  function onEmailChange(value: string) {
+    if (!form) return;
+    const next: AccountFormState = { ...form, user: value };
+    // Auto-infer host/port/secure when the host hasn't been manually set yet
+    // (only while adding — don't clobber an editing account's existing host).
+    if (form.id === null && !form.host) {
+      const cfg = inferImapConfig(value);
+      if (cfg.host) {
+        next.host = cfg.host;
+        next.port = cfg.port;
+        next.secure = cfg.secure;
+      }
+    }
+    setForm(next);
+  }
+
+  function saveForm() {
+    if (!form) return;
+    const user = form.user.trim();
+    if (!user) return;
+    const inferred = inferImapConfig(user);
+    const host = form.host.trim() || inferred.host;
+    if (form.id === null) {
+      // Add
+      const acc: EmailAccount = {
+        id: crypto.randomUUID(),
+        label: form.label.trim() || undefined,
+        enabled: true,
+        host,
+        port: form.port,
+        user,
+        password: form.password,
+        secure: form.secure,
+      };
+      onChange([...accounts, acc]);
+    } else {
+      // Edit — keep existing password unless a new one was typed.
+      onChange(
+        accounts.map((a) =>
+          a.id === form.id
+            ? {
+                ...a,
+                label: form.label.trim() || undefined,
+                user,
+                host,
+                port: form.port,
+                secure: form.secure,
+                password: form.password ? form.password : a.password,
+              }
+            : a,
+        ),
+      );
+    }
+    setForm(null);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="text-xs text-white/50">
+        重要邮件、今日日程与晨报会跨所有「已启用」账户聚合。凭据仅保存在本机浏览器 IndexedDB，需运行本地后端。
+      </div>
+
+      <div className="space-y-2">
+        {accounts.length === 0 && !form && (
+          <div className="text-white/40 text-sm">还没有邮箱账户 — 点下方「添加邮箱账户」。</div>
+        )}
+        {accounts.map((a) => (
+          <div key={a.id} className="rounded-xl bg-white/5 px-3 py-2 flex items-center gap-3">
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ background: colorForAccount(a.id) }}
+              title={a.label ? `${a.label} (${a.user})` : a.user}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm truncate">
+                {a.label ? <span className="text-white/90">{a.label}</span> : null}
+                <span className={a.label ? 'text-white/50 ml-2' : 'text-white/90'}>{a.user}</span>
+              </div>
+              <div className="text-[10px] text-white/40 truncate">{a.host}:{a.port}{a.secure ? ' · TLS' : ''}</div>
+            </div>
+            <Toggle value={a.enabled} onChange={() => toggleEnabled(a.id)} />
+            <button className="text-white/50 hover:text-white p-1" title="编辑" onClick={() => startEdit(a)}>
+              <Pencil size={14} />
+            </button>
+            <button className="text-white/50 hover:text-red-300 p-1" title="删除" onClick={() => remove(a.id)}>
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {!form && (
+        <button className="btn btn-primary" onClick={startAdd}>
+          <PlusCircle size={14} /> 添加邮箱账户
+        </button>
+      )}
+
+      {form && (
+        <div className="rounded-xl bg-white/5 p-4 space-y-3">
+          <div className="text-sm font-medium text-white/80">{form.id === null ? '添加邮箱账户' : '编辑邮箱账户'}</div>
+          <Field label="备注名 (可选，如「工作」)">
+            <input className="input" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="工作 / 个人" />
+          </Field>
+          <Field label="邮箱地址">
+            <input className="input" value={form.user} onChange={(e) => onEmailChange(e.target.value)} placeholder="you@example.com" />
+          </Field>
+          <Field label={form.id === null ? '密码 / App Password (仅存本机)' : '密码 / App Password (留空则不修改)'}>
+            <input
+              className="input"
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              placeholder={form.id === null ? '' : '••••••••'}
+            />
+          </Field>
+          <button
+            type="button"
+            className="text-xs text-aurora-cyan hover:underline"
+            onClick={() => setForm({ ...form, advancedOpen: !form.advancedOpen })}
+          >
+            {form.advancedOpen ? '▾ 高级 (IMAP 主机/端口/SSL)' : '▸ 高级 (IMAP 主机/端口/SSL — 常见邮箱自动填)'}
+          </button>
+          {form.advancedOpen && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="主机">
+                  <input className="input" value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} placeholder="imap.example.com" />
+                </Field>
+                <Field label="端口">
+                  <input className="input" type="number" value={form.port} onChange={(e) => setForm({ ...form, port: Number(e.target.value) })} />
+                </Field>
+              </div>
+              <Field label="使用 TLS">
+                <Toggle value={form.secure} onChange={(v) => setForm({ ...form, secure: v })} />
+              </Field>
+              {form.id === null && !form.host && (
+                <div className="text-[11px] text-white/40">未识别的邮箱域名 — 请手动填写 IMAP 主机。</div>
+              )}
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button className="btn" onClick={() => setForm(null)}>取消</button>
+            <button className="btn btn-primary" onClick={saveForm} disabled={!form.user.trim()}>保存账户</button>
+          </div>
+        </div>
+      )}
+
+      <div className="text-xs text-white/40">Gmail 需启用「App password」(两步验证下生成)，imap.gmail.com:993。</div>
+    </div>
   );
 }
 
@@ -267,25 +479,26 @@ function PromptsTab({
         )}
       </Section>
 
-      <Section title="AI 聊天 · 人格提示词">
-        <div className="space-y-3">
-          {PERSONAS.map((p) => (
-            <div key={p.id} className="rounded-xl bg-white/5 p-3">
-              <div className="text-sm mb-2 flex items-center gap-2">
-                <span className="text-lg">{p.emoji}</span>
-                <span>{p.name}</span>
-                <span className="text-[10px] text-white/40 font-mono">{p.id}</span>
-              </div>
-              <PromptEditor
-                value={prompts.personas[p.id] ?? ''}
-                defaultValue={DEFAULT_PROMPTS.personas[p.id] ?? ''}
-                onChange={(v) =>
-                  setPrompts({ ...prompts, personas: { ...prompts.personas, [p.id]: v } })
-                }
-              />
-            </div>
-          ))}
+      <Section title="邮件 · 待办抽取">
+        <div className="text-[11px] text-white/40 mb-2">
+          沿用「邮件 · 重要性判定」的 AI / 关键词模式与关键词；AI 模式下用下方提示词从邮件中提炼可执行待办。
         </div>
+        <PromptEditor
+          value={prompts.emailTodo}
+          defaultValue={DEFAULT_PROMPTS.emailTodo}
+          onChange={(v) => setPrompts({ ...prompts, emailTodo: v })}
+        />
+      </Section>
+
+      <Section title="晨间播报 · 总结提示词">
+        <div className="text-[11px] text-white/40 mb-2">
+          AI 模式下用于把今日日程 + 重要邮件 + 新闻整合成可朗读的口语化晨报；无 AI key 时后端降级为结构化拼接。
+        </div>
+        <PromptEditor
+          value={prompts.briefingSummary}
+          defaultValue={DEFAULT_PROMPTS.briefingSummary}
+          onChange={(v) => setPrompts({ ...prompts, briefingSummary: v })}
+        />
       </Section>
     </div>
   );

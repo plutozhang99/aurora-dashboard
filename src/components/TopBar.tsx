@@ -1,8 +1,8 @@
-import { Settings, Pencil, MessageCircle, RotateCcw, LayoutGrid } from 'lucide-react';
+import { Settings, Pencil, RotateCcw, LayoutGrid } from 'lucide-react';
 import { useStore, useUI } from '@/lib/store';
 
 export function TopBar() {
-  const { setSettingsOpen, setEditMode, setChatOpen, editMode } = useUI();
+  const { setSettingsOpen, setEditMode, editMode } = useUI();
   const reset = useStore((s) => s.resetLayout);
   const autoFit = useStore((s) => s.autoFitLayout);
   return (
@@ -29,9 +29,6 @@ export function TopBar() {
             </button>
           </>
         )}
-        <button className="btn" onClick={() => setChatOpen(true)} title="打开 AI 聊天">
-          <MessageCircle size={14} /> 聊天
-        </button>
         <button className="btn" onClick={() => setSettingsOpen(true)} title="设置">
           <Settings size={14} /> 设置
         </button>
