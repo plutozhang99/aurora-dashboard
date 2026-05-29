@@ -1,6 +1,6 @@
 # Aurora Dashboard
 
-> 一个本地优先、以**邮件为中心的晨间指挥台** — 晨间语音播报 + 多账户重要邮件聚合 + 今日日程 + 邮件待办建议 + 天气 + 新闻，全部以可拖拽 widget 布局，PWA 安装到桌面 / iPad 即可全屏使用。
+> 一个本地优先、以**邮件为中心的晨间指挥台** — 晨间语音播报 + 多账户重要邮件聚合 + 今日日程 + 邮件待办建议 + 天气 + 新闻，以 Ant Design Masonry 面板布局呈现，PWA 安装到桌面 / iPad 即可全屏使用。
 
 ![aurora](public/favicon.svg)
 
@@ -12,12 +12,12 @@
 - **📬 多账户邮件聚合** — 任意数量 IMAP 账户增删改、独立启用；重要邮件跨所有启用账户**合并、去重、时间倒序**为一个统一列表，来源用轻量色点标识（悬停显账户名），不按账户分栏。单账户失败被隔离，不影响其余。
 - **💡 邮件待办建议** — AI（或关键词降级）从邮件识别「可能的待办」进入独立建议区，一键「确认」转为正式待办（保留邮件来源链接）或「忽略」；默认不污染正式待办。
 - **🕐 六个核心 widget** — 晨间播报、今日日程、重要邮件、待办、新闻、时钟、天气。
-- **拖拽布局** — react-grid-layout，4 个断点 (lg/md/sm/xs) 各自记忆；横屏 iPad 无滚动一屏。
+- **Ant Design Masonry 布局** — 使用 AntD Layout / Flex / Grid / Card 自动按列分配 widget，桌面三列、平板两列、手机单列。
 - **PWA** — 添加到主屏后全屏运行，强制横屏 `display: standalone`。
 - **本地优先** — 设置、布局、待办、晨报缓存全部存浏览器 IndexedDB；**IMAP 密码与 AI Key 不离开本机**。
 - **AI 可选** — 配置 Anthropic / OpenAI key 后，邮件重要性判定、日程抽取、待办识别、晨报总结都走 LLM；**未配置则自动降级为关键词 / 结构化拼接**，功能不缺失。
 - **天气** — Open-Meteo，无需 API key。
-- **美 · Daybreak Almanac** — 暖色「晨报年鉴」编辑风：纸张暖底 + 浓墨文字 + 日出赤陶点缀，发丝线分隔，Fraunces 衬线标题 + Hanken Grotesk 正文 + IBM Plex Mono 数字/标签；登场时卡片错峰淡入。
+- **美 · Illustration Dashboard** — Ant Design v6.4.3 + antd-style 主题：粗黑描边、硬投影、鲜明状态色与插画感控件。
 
 > 自 v0.2 起移除了音乐播放器、系统占用、AI 用量、AI 聊天四个 widget，并把后端从 Node/Express 重写为 Python/FastAPI（`/api` HTTP 契约保持不变）。
 
@@ -70,8 +70,8 @@ backend/.venv/bin/pytest backend/tests -q   # 后端（pytest）：聚合/去重
 src/
   App.tsx / main.tsx          入口 + React Query
   components/
-    Dashboard.tsx             react-grid-layout 容器 + 动态行高
-    WidgetWrapper.tsx         玻璃卡片 + 拖拽手柄 + 删除
+    Dashboard.tsx             AntD Grid / Flex Masonry 容器
+    WidgetWrapper.tsx         AntD Card + 编辑态删除
     TopBar.tsx / SettingsPanel.tsx
     widgets/                  briefing / calendar / email / todo / news / clock / weather
   lib/

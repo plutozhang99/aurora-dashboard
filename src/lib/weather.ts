@@ -83,6 +83,53 @@ export async function reverseGeocode(query: string): Promise<{ lat: number; lon:
   return { lat: r.latitude, lon: r.longitude, name: `${r.name}${r.admin1 ? '·' + r.admin1 : ''}` };
 }
 
+/** localStorage flag: browser geolocation has been resolved (granted or denied). */
+export const GEO_ATTEMPTED_KEY = 'aurora.geo.attempted';
+
+export interface GeoLocation {
+  lat: number;
+  lon: number;
+  name: string;
+}
+
+/** Promise wrapper around navigator.geolocation.getCurrentPosition. */
+export function getCurrentPosition(opts?: PositionOptions): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      reject(new Error('geolocation-unavailable'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, opts);
+  });
+}
+
+/**
+ * Resolve the device's current position and reverse-geocode it to a city label.
+ * Falls back to "lat, lon" text when the reverse lookup fails. Rejects (rather
+ * than swallowing) so callers can tell a permission denial from a transient
+ * error — see {@link isGeoPermissionDenied}.
+ */
+export async function locateCurrentCity(opts?: PositionOptions): Promise<GeoLocation> {
+  const pos = await getCurrentPosition({
+    enableHighAccuracy: false,
+    timeout: 8000,
+    maximumAge: 1000 * 60 * 60,
+    ...opts,
+  });
+  const { latitude, longitude } = pos.coords;
+  const name = await reverseGeocodeLatLon(latitude, longitude);
+  return {
+    lat: latitude,
+    lon: longitude,
+    name: name ?? `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+  };
+}
+
+/** True when the user explicitly blocked location (GeolocationPositionError.PERMISSION_DENIED). */
+export function isGeoPermissionDenied(err: unknown): boolean {
+  return !!err && typeof err === 'object' && 'code' in err && (err as GeolocationPositionError).code === 1;
+}
+
 /**
  * Reverse-geocode a lat/lon to a human-readable city label. Uses BigDataCloud's
  * free, key-less, browser-friendly reverse endpoint. Returns null on any

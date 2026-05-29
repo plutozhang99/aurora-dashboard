@@ -1,310 +1,275 @@
-@import "tailwindcss";
-@import "@heroui/styles";
-
-/* ============================================================
-   Daybreak Almanac — a warm editorial morning broadsheet.
-   Paper & ink, a single sunrise-ember accent, hairline rules,
-   Fraunces display + Hanken Grotesk body + IBM Plex Mono labels.
-   ============================================================ */
-
-/* Daybreak palette as raw CSS vars (used by inline styles + custom utilities). */
-:root,
-[data-theme="light"] {
-  color-scheme: light;
-
-  --paper:   #F4EFE6;
-  --paper-2: #EBE3D4;
-  --paper-3: #E2D7C2;
-  --card:    #FCFAF4;
-
-  --ink:   #211C17;
-  --ink-2: #5C5347;
-  --ink-3: #8A7F6E;
-  --ink-4: #A89C88;
-
-  --rule:        #DCD2C0;
-  --rule-strong: #C8BAA1;
-
-  --ember:      #C75B39;
-  --ember-deep: #A8442A;
-  --ember-soft: rgba(199, 91, 57, 0.10);
-
-  /* ── Map Daybreak palette onto HeroUI v3 semantic tokens ── */
-  --color-background:           var(--paper);
-  --color-foreground:           var(--ink);
-  --color-surface:              var(--card);
-  --color-surface-foreground:   var(--ink);
-  --color-surface-secondary:    var(--paper-2);
-  --color-surface-tertiary:     var(--paper-3);
-  --color-muted:                var(--ink-3);
-  --color-muted-foreground:     var(--ink-2);
-  --color-border:               var(--rule);
-  --color-divider:              var(--rule);
-
-  --color-primary:              var(--ember);
-  --color-primary-foreground:   #FBF8F1;
-  --color-accent:               var(--ember);
-  --color-accent-foreground:    #FBF8F1;
-  --color-default:              var(--paper-2);
-  --color-default-foreground:   var(--ink);
-  --color-secondary:            var(--paper-2);
-  --color-secondary-foreground: var(--ink);
-  --color-danger:               var(--ember-deep);
-  --color-danger-foreground:    #FBF8F1;
-  --color-success:              #6E7257;
-  --color-success-foreground:   #FBF8F1;
-  --color-warning:              #B8853A;
-  --color-warning-foreground:   var(--ink);
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
 }
-
-/* Expose Daybreak tokens + display fonts to Tailwind utilities. */
-@theme inline {
-  --color-paper:        var(--paper);
-  --color-paper-2:      var(--paper-2);
-  --color-paper-3:      var(--paper-3);
-  --color-card:         var(--card);
-  --color-ink:          var(--ink);
-  --color-ink-2:        var(--ink-2);
-  --color-ink-3:        var(--ink-3);
-  --color-ink-4:        var(--ink-4);
-  --color-rule:         var(--rule);
-  --color-rule-strong:  var(--rule-strong);
-  --color-ember:        var(--ember);
-  --color-ember-deep:   var(--ember-deep);
-  --color-ember-soft:   var(--ember-soft);
-  --color-ochre:        #B8853A;
-  --color-sage:         #6E7257;
-  --color-slatey:       #5B6B7A;
-  --color-plum:         #7A4E63;
-  --color-teal:         #3E7A72;
-
-  --font-sans:    "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Fraunces", Georgia, Cambria, serif;
-  --font-mono:    "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
-
-  --shadow-card:       0 1px 2px rgba(33, 28, 23, 0.04), 0 12px 28px rgba(33, 28, 23, 0.055);
-  --shadow-card-hover: 0 2px 6px rgba(33, 28, 23, 0.06), 0 18px 42px rgba(33, 28, 23, 0.09);
-}
-
-html, body, #root { height: 100%; width: 100%; margin: 0; }
 
 body {
-  font-family: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif;
-  color: var(--ink);
-  /* paper + a soft dawn glow rising from the top edge */
+  color: #2c2c2c;
   background:
-    radial-gradient(125% 65% at 50% -12%, rgba(199, 91, 57, 0.11), transparent 60%),
-    radial-gradient(90% 55% at 88% -8%, rgba(184, 133, 58, 0.08), transparent 55%),
-    var(--paper);
-  background-attachment: fixed;
+    linear-gradient(90deg, rgba(82, 196, 26, 0.08) 0 1px, transparent 1px 28px),
+    linear-gradient(0deg, rgba(77, 171, 247, 0.08) 0 1px, transparent 1px 28px),
+    #fff9f0;
   overscroll-behavior: none;
-  touch-action: manipulation;
-  -webkit-user-select: none;
-  user-select: none;
 }
 
-::selection { background: var(--ember-soft); color: var(--ink); }
+::selection {
+  background: #ffd93d;
+  color: #2c2c2c;
+}
 
-/* Fine paper grain laid over everything (static, cheap). */
-.paper-grain::before {
-  content: '';
+.app-shell {
+  min-height: 100vh;
+  background: transparent;
+}
+
+.app-content {
+  padding: 72px 20px 124px;
+}
+
+.top-bar {
   position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.045;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  inset: 0 0 auto;
+  z-index: 30;
+  height: 56px;
+  padding: 0 20px;
+  line-height: normal;
+  background: #ffffff;
+  border-bottom: 3px solid #2c2c2c;
+  box-shadow: 0 4px 0 #2c2c2c;
 }
 
-/* ---- Typographic helpers (still useful alongside HeroUI components) ---- */
+.brand-title,
+.brand-title.ant-typography {
+  margin: 0;
+  color: #2c2c2c;
+  font-size: 24px;
+  line-height: 56px;
+}
+
+.brand-dot {
+  color: #52c41a;
+}
+
+.top-subtitle {
+  white-space: nowrap;
+}
+
 .kicker {
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
   text-transform: uppercase;
-  font-size: 10.5px;
-  letter-spacing: 0.16em;
-  font-weight: 500;
-  color: var(--ink-3);
-}
-.num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
-
-/* Section header: kicker on the left, meta on the right, hairline under. */
-.sec-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--rule);
 }
 
-/* ---- Briefing prose (expanded morning briefing markdown) ---- */
-.prose-briefing { color: var(--ink-2); line-height: 1.7; }
-.prose-briefing h1, .prose-briefing h2, .prose-briefing h3 {
-  font-family: 'Fraunces', Georgia, serif; color: var(--ink);
-  font-weight: 600; margin: 0.6em 0 0.3em; line-height: 1.2;
+.num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
 }
-.prose-briefing h2 { font-size: 1.05rem; }
-.prose-briefing h3 { font-size: 0.98rem; }
-.prose-briefing p { margin: 0 0 0.7em; }
-.prose-briefing strong { color: var(--ink); font-weight: 600; }
-.prose-briefing ul { margin: 0 0 0.7em; padding-left: 1.1em; }
-.prose-briefing li { margin: 0.15em 0; }
-.prose-briefing li::marker { color: var(--ember); }
-.prose-briefing a { color: var(--ember-deep); text-underline-offset: 2px; }
 
-/* ---- react-grid-layout overrides ---- */
-.react-grid-item.react-grid-placeholder {
-  background: var(--ember-soft) !important;
-  border: 1.5px dashed rgba(199, 91, 57, 0.45);
-  border-radius: 14px;
-  transition-duration: 100ms;
+.dashboard-masonry {
+  width: 100%;
+  max-width: 1480px;
+  margin: 0 auto;
 }
-.react-grid-item > .react-resizable-handle { background-image: none; }
-.react-grid-item > .react-resizable-handle::after {
-  content: '';
+
+.masonry-column {
+  min-width: 0;
+}
+
+.widget-card {
+  position: relative;
+  break-inside: avoid;
+  overflow: hidden;
+}
+
+.widget-actions {
   position: absolute;
-  right: 6px; bottom: 6px;
-  width: 8px; height: 8px;
-  border-right: 2px solid var(--ink-3);
-  border-bottom: 2px solid var(--ink-3);
-  border-radius: 1px;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
 }
-.react-grid-item.react-draggable-dragging { z-index: 50; cursor: grabbing; }
 
-/* ---- Slim scrollbar inside widgets ---- */
-.scroll-area { overflow: auto; }
-.scroll-area::-webkit-scrollbar { width: 6px; height: 6px; }
-.scroll-area::-webkit-scrollbar-thumb { background: var(--rule-strong); border-radius: 99px; }
-.scroll-area::-webkit-scrollbar-track { background: transparent; }
-
-.drag-handle { cursor: grab; }
-.drag-handle:active { cursor: grabbing; }
-.no-scroll { overflow: hidden; }
-
-/* ---- Staggered editorial reveal on load (skipped when reduceMotion) ---- */
-@keyframes reveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.motion-ok .reveal { animation: reveal 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-.motion-ok .react-grid-item:nth-child(1)  .reveal { animation-delay: 0.02s; }
-.motion-ok .react-grid-item:nth-child(2)  .reveal { animation-delay: 0.06s; }
-.motion-ok .react-grid-item:nth-child(3)  .reveal { animation-delay: 0.10s; }
-.motion-ok .react-grid-item:nth-child(4)  .reveal { animation-delay: 0.14s; }
-.motion-ok .react-grid-item:nth-child(5)  .reveal { animation-delay: 0.18s; }
-.motion-ok .react-grid-item:nth-child(6)  .reveal { animation-delay: 0.22s; }
-.motion-ok .react-grid-item:nth-child(7)  .reveal { animation-delay: 0.26s; }
-.motion-ok .react-grid-item:nth-child(8)  .reveal { animation-delay: 0.30s; }
-.motion-ok .react-grid-item:nth-child(9)  .reveal { animation-delay: 0.34s; }
-.motion-ok .react-grid-item:nth-child(10) .reveal { animation-delay: 0.38s; }
-
-/* ---- Briefing player (bottom dock) ---- */
-@keyframes slideup {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: none; }
+.widget-content {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
 }
-.motion-ok .player-panel { animation: slideup 0.28s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 
-/* Floating music-pill briefing dock. Centered, max-width, paper-tinted with
-   a soft backdrop blur so the grid still reads behind it. */
-.player-pill {
-  width: max-content;
-  max-width: min(960px, calc(100vw - 24px));
-  padding: 7px 10px;
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--card) 88%, transparent);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  backdrop-filter: blur(18px) saturate(140%);
-  border: 1px solid var(--rule);
-  box-shadow:
-    0 1px 1px rgba(33, 28, 23, 0.04),
-    0 14px 32px rgba(33, 28, 23, 0.12);
+.widget-divider {
+  margin: 10px 0 12px;
+  border-block-start-width: 3px;
 }
-.motion-ok .player-pill { animation: slideup 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 
-.player-icon-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 32px; height: 32px;
-  border-radius: 9999px;
-  color: var(--ink-2);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+.now-widget {
+  min-height: 0;
+  overflow: hidden;
+  container-type: inline-size;
 }
-.player-icon-btn:hover:not(:disabled) {
-  background: var(--paper-2);
-  color: var(--ink);
-}
-.player-icon-btn:active:not(:disabled) { transform: scale(0.94); }
-.player-icon-btn:disabled { opacity: 0.4; cursor: default; }
-.player-icon-btn.is-active { color: var(--ember); background: var(--ember-soft); }
-.player-icon-deco { color: var(--ink-3); cursor: default; }
-.player-icon-deco:hover { background: transparent; color: var(--ink-3); }
 
-.player-play {
-  display: inline-grid;
-  place-items: center;
-  width: 38px; height: 38px;
-  margin: 0 2px;
-  border-radius: 9999px;
-  color: var(--ink);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: background 120ms ease, transform 120ms ease;
+.now-main {
+  flex: 1;
+  min-height: 0;
 }
-.player-play:hover:not(:disabled) { background: var(--paper-2); }
-.player-play:active:not(:disabled) { transform: scale(0.94); }
-.player-play:disabled { opacity: 0.4; cursor: default; }
 
-.player-art {
-  width: 38px; height: 38px;
-  border-radius: 8px;
+.now-time {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.now-weather {
+  min-width: 220px;
+  flex: 0 0 auto;
+}
+
+.clock-title.ant-typography {
+  margin: 0;
+  font-size: clamp(46px, 12cqw, 92px);
+  line-height: 0.86;
+  white-space: nowrap;
+}
+
+.clock-seconds {
+  margin-left: 8px;
+  font-size: 0.28em;
+  vertical-align: top;
+}
+
+.weather-emoji {
+  font-size: clamp(42px, 9cqw, 68px);
+  line-height: 1;
+}
+
+.weather-stat .ant-statistic-content {
+  font-size: clamp(34px, 6cqw, 48px);
+  line-height: 1;
+}
+
+.weather-tag {
+  max-width: 260px;
+  margin-inline-end: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.settings-tab {
+  padding-top: 4px;
+}
+
+.widget-toggle-card {
+  width: min(100%, 240px);
+}
+
+.account-mail {
+  max-width: 260px;
+}
+
+.briefing-panel {
+  position: fixed;
+  left: 50%;
+  bottom: 92px;
+  z-index: 40;
+  width: min(780px, calc(100vw - 32px));
+  max-height: 58vh;
+  overflow: auto;
+  transform: translateX(-50%);
+}
+
+.briefing-pill {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 40;
+  width: min(760px, calc(100vw - 32px));
+  transform: translateX(-50%);
+}
+
+.briefing-title {
+  min-width: 0;
+  flex: 1;
+  height: auto;
+  padding-block: 4px;
+  text-align: left;
+}
+
+.lyrics-text {
+  max-height: 46vh;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  line-height: 1.8;
+}
+
+.boot-splash {
   display: grid;
+  min-height: calc(100vh - 180px);
   place-items: center;
-  color: var(--ember-deep);
-  background:
-    radial-gradient(120% 120% at 25% 15%, rgba(255, 220, 180, 0.85), transparent 60%),
-    linear-gradient(135deg, var(--ember-soft), color-mix(in srgb, var(--ember) 22%, var(--paper)));
-  border: 1px solid var(--rule);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  text-align: center;
 }
 
-.player-title {
-  padding: 2px 6px;
-  border-radius: 8px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  min-width: 180px;
+.boot-splash .ant-typography {
+  margin: 0;
 }
-.player-title:hover:not(:disabled) { background: var(--paper-2); }
-.player-title:disabled { cursor: default; }
 
-/* Equalizer — animated bars next to the play button while TTS is speaking. */
-.eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
-.eq i {
-  display: inline-block;
-  width: 2.5px; height: 3px; border-radius: 1px;
-  background: var(--ember);
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
-.motion-ok .eq i { animation: eqbar 0.9s ease-in-out infinite; }
-.motion-ok .eq i:nth-child(2) { animation-delay: 0.12s; }
-.motion-ok .eq i:nth-child(3) { animation-delay: 0.24s; }
-.motion-ok .eq i:nth-child(4) { animation-delay: 0.36s; }
-@keyframes eqbar { 0%, 100% { height: 3px; } 50% { height: 14px; } }
 
-/* Lyrics — the expanded briefing text inside the player panel. */
-.lyrics {
-  font-family: 'Fraunces', Georgia, Cambria, serif;
-  color: var(--ink);
-  font-size: 18px;
-  line-height: 1.85;
+.motion-ok .reveal {
+  animation: reveal 0.36s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
-.lyrics p { margin: 0 0 0.85em; }
-.lyrics p:last-child { margin-bottom: 0; }
-.lyrics strong { font-weight: 600; }
-.lyrics h1, .lyrics h2, .lyrics h3 { font-weight: 600; margin: 0.7em 0 0.35em; line-height: 1.25; }
-.lyrics h2 { font-size: 1.15em; }
-.lyrics h3 { font-size: 1.05em; }
-.lyrics ul { padding-left: 1.15em; margin: 0 0 0.85em; }
-.lyrics li { margin: 0.2em 0; }
-.lyrics li::marker { color: var(--ember); }
-.lyrics a { color: var(--ember-deep); text-underline-offset: 2px; }
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.001ms !important;
+}
+
+@media (max-width: 720px) {
+  .app-content {
+    padding: 70px 12px 140px;
+  }
+
+  .top-bar {
+    padding: 0 12px;
+  }
+
+  .top-subtitle {
+    display: none;
+  }
+
+  .dashboard-masonry {
+    flex-direction: column;
+  }
+
+  .now-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .now-weather {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .briefing-pill .ant-flex {
+    flex-wrap: wrap;
+  }
+}

@@ -1,32 +1,25 @@
-import { GripVertical, X } from 'lucide-react';
-import { Button, Card, CardContent } from '@heroui/react';
+import { Button, Card, Flex, Tooltip } from 'antd';
 import { useStore, useUI } from '@/lib/store';
 import type { WidgetInstance } from '@/types';
-import { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
-export function WidgetWrapper({ widget, children }: { widget: WidgetInstance; children: ReactNode }) {
+export function WidgetWrapper({ widget, children, height }: { widget: WidgetInstance; children: ReactNode; height?: number }) {
   const editMode = useUI((s) => s.editMode);
   const remove = useStore((s) => s.removeWidget);
+  const style: CSSProperties | undefined = height ? { height } : undefined;
+
   return (
-    <Card className="reveal h-full w-full overflow-hidden relative flex flex-col bg-card shadow-card hover:shadow-card-hover transition-shadow">
+    <Card className="widget-card reveal" style={style} styles={{ body: { minHeight: 0, height: '100%', padding: 16 } }}>
       {editMode && (
-        <>
-          <div className="drag-handle absolute top-2 left-2 z-10 w-6 h-6 rounded-md bg-paper-2 border border-rule grid place-items-center text-ink-3 hover:text-ink">
-            <GripVertical size={14} />
-          </div>
-          <Button
-            isIconOnly
-            size="sm"
-            variant="tertiary"
-            onPress={() => remove(widget.id)}
-            aria-label="移除此组件"
-            className="absolute top-2 right-2 z-10 w-6 h-6 min-w-0 rounded-md bg-paper-2 border border-rule"
-          >
-            <X size={14} />
-          </Button>
-        </>
+        <Flex className="widget-actions" gap={8}>
+          <Tooltip title="移除此组件">
+            <Button size="small" danger onClick={() => remove(widget.id)}>
+              移除
+            </Button>
+          </Tooltip>
+        </Flex>
       )}
-      <CardContent className="flex-1 min-h-0 p-3.5">{children}</CardContent>
+      {children}
     </Card>
   );
 }

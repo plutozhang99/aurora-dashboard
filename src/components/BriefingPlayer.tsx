@@ -1,12 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import {
-  Play, Pause, ChevronDown,
-  Shuffle, SkipBack, SkipForward, Repeat,
-  Ellipsis, MessageSquareQuote, ListMusic, Airplay, Volume2,
-  Sunrise, Sun, Moon,
-} from 'lucide-react';
-import { Card, CardContent, ScrollShadow } from '@heroui/react';
+import { Button, Card, Flex, Space, Typography } from 'antd';
 import { useStore } from '@/lib/store';
 import { api, apiAvailable } from '@/lib/api';
 import {
@@ -32,24 +25,16 @@ function enabledAccounts(s: AppSettings): EmailAccount[] {
 function introLine(text: string): string {
   const firstLine = text.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
   const sentence = firstLine.split(/(?<=[。！？.!?])/)[0] ?? firstLine;
-  return sentence.length > 120 ? `${sentence.slice(0, 120)}…` : sentence;
+  return sentence.length > 120 ? `${sentence.slice(0, 120)}...` : sentence;
 }
 
-/** 早安 / 午安 / 晚安 based on local hour, with a matching emblem icon. */
-function greetingFor(now: Date): { zh: string; Icon: typeof Sunrise } {
+function greetingFor(now: Date): string {
   const h = now.getHours();
-  if (h >= 5 && h < 12) return { zh: '早安', Icon: Sunrise };
-  if (h >= 12 && h < 18) return { zh: '午安', Icon: Sun };
-  return { zh: '晚安', Icon: Moon };
+  if (h >= 5 && h < 12) return '早安';
+  if (h >= 12 && h < 18) return '午安';
+  return '晚安';
 }
 
-/**
- * Floating music-pill briefing dock. Layout mirrors Apple Music's mini player:
- * shuffle / prev / play / next / repeat on the left, album-art + title in the
- * middle, secondary controls (more, lyrics, queue, airplay, volume) on the
- * right. Only play/pause, lyrics, and repeat are wired — the rest are
- * decorative to keep the silhouette familiar.
- */
 export function BriefingPlayer() {
   const settings = useStore((s) => s.settings);
   const accounts = enabledAccounts(settings);
@@ -64,7 +49,6 @@ export function BriefingPlayer() {
 
   const tts = getTts(settings.ttsEngine);
 
-  // Tick once a minute so the greeting flips at the hour boundaries.
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(t);
@@ -145,166 +129,47 @@ export function BriefingPlayer() {
     await generate();
   }
 
-  const { zh: greeting, Icon: GreetingIcon } = greetingFor(now);
+  const greeting = greetingFor(now);
   const dateLabel = now.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
   const canPlay = ttsAvailable() && !!briefing;
   const subtitle = briefing
     ? introLine(briefing.text)
     : hasBackend === false
-      ? '本地后端未运行 — 启动后端后可生成播报。'
+      ? '本地后端未运行，启动后端后可生成播报。'
       : loading
-        ? '正在生成播报…'
+        ? '正在生成播报...'
         : accounts.length === 0
-          ? '在 设置 → 邮件 添加账户后可生成今日播报。'
+          ? '在 设置 -> 邮件 添加账户后可生成今日播报。'
           : 'Aurora · 今日早报';
 
   return (
     <>
-      {/* Lyrics panel — slides up above the pill */}
       {expanded && briefing && (
-        <div className="fixed inset-x-0 bottom-[88px] z-30 px-3 pointer-events-none">
-          <Card className="player-panel pointer-events-auto max-w-3xl mx-auto bg-card shadow-card">
-            <CardContent className="p-0">
-              <div className="sec-head px-6 pt-6 pb-3 mb-3">
-                <span className="kicker truncate">播报 · Briefing · {dateLabel}</span>
-                <button
-                  type="button"
-                  className="player-icon-btn"
-                  onClick={() => setExpanded(false)}
-                  aria-label="收起"
-                >
-                  <ChevronDown size={16} />
-                </button>
-              </div>
-              <ScrollShadow hideScrollBar className="max-h-[58vh] px-6 pb-6">
-                <div className="lyrics">
-                  <ReactMarkdown>{briefing.text}</ReactMarkdown>
-                </div>
-              </ScrollShadow>
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="briefing-panel">
+          <Flex vertical gap={12}>
+            <Flex justify="space-between" align="center" gap={12}>
+              <Typography.Text className="kicker">播报 · Briefing · {dateLabel}</Typography.Text>
+              <Button onClick={() => setExpanded(false)}>收起</Button>
+            </Flex>
+            <Typography.Paragraph className="lyrics-text">{briefing.text}</Typography.Paragraph>
+          </Flex>
+        </Card>
       )}
 
-      {/* The pill — centered, floating, always-on */}
-      <div className="fixed inset-x-0 bottom-4 z-30 pointer-events-none px-3">
-        <div className="player-pill pointer-events-auto mx-auto flex items-center gap-1.5 sm:gap-2">
-          {/* Left transport cluster */}
-          <PillIcon label="随机" onClick={regenerate} disabled={loading}>
-            <Shuffle size={16} className={loading ? 'animate-spin' : ''} />
-          </PillIcon>
-          <PillIcon label="上一首" decorative>
-            <SkipBack size={18} />
-          </PillIcon>
-          <button
-            type="button"
-            className="player-play"
-            onClick={togglePlay}
-            disabled={!canPlay}
-            aria-label={canPlay ? (speaking ? '暂停' : '播放') : '当前环境不支持语音播报'}
-          >
-            {speaking ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
-          </button>
-          <PillIcon label="下一首" decorative>
-            <SkipForward size={18} />
-          </PillIcon>
-          <PillIcon label="重新生成" onClick={regenerate} disabled={loading}>
-            <Repeat size={16} className={loading ? 'animate-spin' : ''} />
-          </PillIcon>
-
-          {/* Vertical hairline divider */}
-          <span className="hidden sm:block w-px h-7 bg-rule mx-1" aria-hidden />
-
-          {/* Album art */}
-          <div className="player-art shrink-0" aria-hidden>
-            <GreetingIcon size={20} />
-          </div>
-
-          {/* Title + subtitle — clicking expands lyrics */}
-          <button
-            type="button"
-            className="player-title min-w-0 flex-1 text-left disabled:cursor-default focus:outline-none"
-            onClick={() => briefing && setExpanded((v) => !v)}
-            disabled={!briefing}
-            aria-label={briefing ? (expanded ? '收起全文' : '展开全文') : '暂无播报'}
-          >
-            <div className="flex items-center gap-1.5">
-              <span className="truncate text-ink font-medium text-[13.5px]">
-                {greeting}，{dateLabel}
-              </span>
-              {speaking && (
-                <span className="eq shrink-0" aria-hidden>
-                  <i /><i /><i /><i />
-                </span>
-              )}
-              {briefing && !speaking && (
-                <span className="text-ember text-[11px] shrink-0" aria-hidden>★</span>
-              )}
-            </div>
-            <div className="truncate text-ink-3 text-[12px] leading-tight">
-              {subtitle}
-            </div>
-          </button>
-
-          {/* Right secondary cluster */}
-          <PillIcon label="更多" decorative>
-            <Ellipsis size={16} />
-          </PillIcon>
-          <PillIcon
-            label={expanded ? '收起歌词' : '查看歌词'}
-            onClick={() => briefing && setExpanded((v) => !v)}
-            disabled={!briefing}
-            active={expanded}
-          >
-            <MessageSquareQuote size={16} />
-          </PillIcon>
-          <PillIcon label="播放队列" decorative>
-            <ListMusic size={16} />
-          </PillIcon>
-          <PillIcon label="AirPlay" decorative>
-            <Airplay size={16} />
-          </PillIcon>
-          <PillIcon label="音量" decorative>
-            <Volume2 size={16} />
-          </PillIcon>
-        </div>
-      </div>
+      <Card className="briefing-pill" styles={{ body: { padding: '8px 12px' } }}>
+        <Flex align="center" gap={10}>
+          <Button type="primary" onClick={togglePlay} disabled={!canPlay}>
+            {speaking ? '暂停' : '播放'}
+          </Button>
+          <Button onClick={regenerate} loading={loading}>重生成</Button>
+          <Button type="text" className="briefing-title" onClick={() => briefing && setExpanded((v) => !v)} disabled={!briefing}>
+            <Space direction="vertical" size={0} align="start">
+              <Typography.Text strong>{greeting}，{dateLabel}</Typography.Text>
+              <Typography.Text type="secondary" ellipsis>{subtitle}</Typography.Text>
+            </Space>
+          </Button>
+        </Flex>
+      </Card>
     </>
-  );
-}
-
-interface PillIconProps {
-  label: string;
-  onClick?: () => void;
-  /** Visible but non-interactive — keeps the Apple Music silhouette intact. */
-  decorative?: boolean;
-  disabled?: boolean;
-  active?: boolean;
-  children: React.ReactNode;
-}
-
-function PillIcon({ label, onClick, decorative, disabled, active, children }: PillIconProps) {
-  if (decorative) {
-    return (
-      <span
-        className="player-icon-btn player-icon-deco"
-        aria-label={label}
-        title={label}
-      >
-        {children}
-      </span>
-    );
-  }
-  return (
-    <button
-      type="button"
-      className={`player-icon-btn ${active ? 'is-active' : ''}`}
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      title={label}
-    >
-      {children}
-    </button>
   );
 }

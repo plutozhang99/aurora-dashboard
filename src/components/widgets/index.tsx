@@ -1,3 +1,4 @@
+import { Alert } from 'antd';
 import type { WidgetInstance } from '@/types';
 import { NowWidget } from './NowWidget';
 import { CalendarWidget } from './CalendarWidget';
@@ -12,7 +13,7 @@ export function renderWidget(w: WidgetInstance) {
     case 'email': return <EmailWidget />;
     case 'todo': return <TodoWidget />;
     case 'news': return <NewsWidget />;
-    default: return <div className="text-ink-3">未知组件: {w.type}</div>;
+    default: return <Alert type="warning" message={`未知组件: ${w.type}`} />;
   }
 }
 

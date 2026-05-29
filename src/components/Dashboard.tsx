@@ -1,90 +1,73 @@
-import { Responsive, WidthProvider, type Layout } from 'react-grid-layout';
-import { useMemo, useEffect, useRef, useState } from 'react';
-import { useStore, useUI } from '@/lib/store';
+import { Grid, Flex } from 'antd';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useStore } from '@/lib/store';
 import { WidgetWrapper } from './WidgetWrapper';
 import { renderWidget } from './widgets';
 import type { Breakpoint } from '@/types';
 
-const RGL = WidthProvider(Responsive);
+const COLUMN_HINT: Record<string, number> = {
+  now: 1.35,
+  calendar: 1,
+  email: 1.15,
+  todo: 1,
+  news: 1.25,
+};
 
 export function Dashboard() {
   const layout = useStore((s) => s.layout);
-  const setLayouts = useStore((s) => s.setLayouts);
-  const editMode = useUI((s) => s.editMode);
-
+  const screens = Grid.useBreakpoint();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [rowHeight, setRowHeight] = useState(64);
+  const [availableHeight, setAvailableHeight] = useState(720);
+  const breakpoint: Breakpoint = screens.xl ? 'lg' : screens.md ? 'md' : screens.sm ? 'sm' : 'xs';
+  const columnCount = breakpoint === 'lg' ? 3 : breakpoint === 'md' ? 2 : 1;
 
-  // Fit content to viewport (no-scroll). We compute rowHeight based on the
-  // container's actual inner area divided by max layout row count.
   useEffect(() => {
     function recompute() {
-      const el = containerRef.current;
-      if (!el) return;
-      const cs = getComputedStyle(el);
-      const padTop = parseFloat(cs.paddingTop) || 0;
-      const padBottom = parseFloat(cs.paddingBottom) || 0;
-      const available = el.clientHeight - padTop - padBottom;
-      const bp = pickBreakpoint(window.innerWidth);
-      const items = layout.layouts[bp];
-      if (!items.length) return;
-      const maxRow = Math.max(...items.map((l) => l.y + l.h));
-      const margin = 12;
-      // formula matches react-grid-layout: total = rows * rowHeight + (rows-1) * margin
-      const rh = Math.max(36, Math.floor((available - (maxRow - 1) * margin) / maxRow));
-      setRowHeight(rh);
+      const top = containerRef.current?.getBoundingClientRect().top ?? 72;
+      setAvailableHeight(Math.max(420, window.innerHeight - top - 124));
     }
-    recompute();
-    const ro = new ResizeObserver(recompute);
-    if (containerRef.current) ro.observe(containerRef.current);
-    window.addEventListener('orientationchange', recompute);
-    window.addEventListener('resize', recompute);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('orientationchange', recompute);
-      window.removeEventListener('resize', recompute);
-    };
-  }, [layout]);
 
-  const items = useMemo(() => layout.widgets, [layout.widgets]);
+    recompute();
+    window.addEventListener('resize', recompute);
+    window.addEventListener('orientationchange', recompute);
+    return () => {
+      window.removeEventListener('resize', recompute);
+      window.removeEventListener('orientationchange', recompute);
+    };
+  }, []);
+
+  const columns = useMemo(() => {
+    const items = new Map((layout.layouts[breakpoint] ?? []).map((item) => [item.i, item]));
+    const next = Array.from({ length: columnCount }, () => ({
+      height: 0,
+      widgets: [] as { widget: typeof layout.widgets[number]; rows: number }[],
+    }));
+
+    for (const widget of layout.widgets) {
+      const rows = Math.max(3, items.get(widget.id)?.h ?? Math.round((COLUMN_HINT[widget.type] ?? 1) * 5));
+      const target = next.reduce((shortest, col) => (col.height < shortest.height ? col : shortest), next[0]);
+      target.widgets.push({ widget, rows });
+      target.height += rows;
+    }
+
+    return next.map((col) => col.widgets);
+  }, [breakpoint, columnCount, layout.layouts, layout.widgets]);
+
+  const maxRows = Math.max(1, ...columns.map((column) => column.reduce((sum, item) => sum + item.rows, 0)));
+  const maxGaps = Math.max(0, ...columns.map((column) => column.length - 1));
+  const rowHeight = Math.max(44, Math.floor((availableHeight - maxGaps * 16) / maxRows));
 
   return (
-    <div
-      ref={containerRef}
-      className="absolute inset-0 pt-12 pb-[88px] px-3 overflow-hidden"
-    >
-      <RGL
-        className="layout"
-        layouts={layout.layouts}
-        breakpoints={{ lg: 1280, md: 996, sm: 720, xs: 0 }}
-        cols={{ lg: 12, md: 8, sm: 6, xs: 4 }}
-        rowHeight={rowHeight}
-        margin={[12, 12]}
-        containerPadding={[0, 0]}
-        compactType="vertical"
-        preventCollision={false}
-        isDraggable={editMode}
-        isResizable={editMode}
-        draggableHandle=".drag-handle"
-        onLayoutChange={(_current, all) => {
-          (Object.keys(all) as Breakpoint[]).forEach((bp) => {
-            setLayouts(bp, all[bp] as Layout[]);
-          });
-        }}
-      >
-        {items.map((w) => (
-          <div key={w.id} className="">
-            <WidgetWrapper widget={w}>{renderWidget(w)}</WidgetWrapper>
-          </div>
-        ))}
-      </RGL>
-    </div>
+    <Flex ref={containerRef} className="dashboard-masonry" gap={16} align="flex-start">
+      {columns.map((widgets, index) => (
+        <Flex key={index} vertical gap={16} flex={1} className="masonry-column">
+          {widgets.map(({ widget, rows }) => (
+            <WidgetWrapper key={widget.id} widget={widget} height={rows * rowHeight}>
+              {renderWidget(widget)}
+            </WidgetWrapper>
+          ))}
+        </Flex>
+      ))}
+    </Flex>
   );
-}
-
-function pickBreakpoint(w: number): Breakpoint {
-  if (w >= 1280) return 'lg';
-  if (w >= 996) return 'md';
-  if (w >= 720) return 'sm';
-  return 'xs';
 }

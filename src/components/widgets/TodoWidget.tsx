@@ -1,8 +1,7 @@
+import { Badge, Button, Checkbox, Flex, Input, List, Space, Typography } from 'antd';
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useQuery } from '@tanstack/react-query';
-import { CheckSquare, Plus, Trash2, Square, Paperclip, Lightbulb, Check, X } from 'lucide-react';
-import { Button, TextField, Input } from '@heroui/react';
 import {
   db,
   activeSuggestions,
@@ -13,7 +12,7 @@ import { useStore } from '@/lib/store';
 import { api, apiAvailable } from '@/lib/api';
 import { colorForAccount } from '@/lib/accountColors';
 import type { AppSettings, EmailAccount, TodoItem, TodoSuggestion, AccountError } from '@/types';
-import { Header } from './CalendarWidget';
+import { WidgetHeader } from './CalendarWidget';
 
 interface TodosResponse {
   suggestions: TodoSuggestion[];
@@ -95,97 +94,57 @@ export function TodoWidget() {
   const remaining = items?.filter((i) => !i.done).length ?? 0;
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <Header icon={<CheckSquare size={14} className="text-ember" />} title="待办 · To-do" right={`剩 ${remaining}`} />
-      <div className="flex gap-2 mt-3">
-        <TextField
+    <Flex vertical className="widget-content">
+      <WidgetHeader title="待办 · To-do" right={`剩 ${remaining}`} />
+      <Space.Compact className="full-width">
+        <Input
           value={input}
-          onChange={setInput}
-          className="flex-1"
-          onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
-            if (e.key === 'Enter') add();
-          }}
-        >
-          <Input placeholder="新增一项待办…" />
-        </TextField>
-        <Button isIconOnly size="sm" variant="primary" onPress={add} aria-label="添加待办">
-          <Plus size={14} />
-        </Button>
-      </div>
-      <div className="flex-1 min-h-0 scroll-area mt-2">
-        <div className="divide-y divide-rule">
-          {items?.map((it) => (
-            <div key={it.id} className="flex items-center gap-2.5 py-2 group">
-              <button
-                type="button"
-                onClick={() => toggle(it)}
-                className={`shrink-0 ${it.done ? 'text-sage' : 'text-ink-3 hover:text-ink'}`}
-                aria-label={it.done ? '标记未完成' : '标记完成'}
-              >
-                {it.done ? <CheckSquare size={16} /> : <Square size={16} />}
-              </button>
-              <div className={`flex-1 text-sm truncate ${it.done ? 'line-through text-ink-4' : 'text-ink'}`}>{it.text}</div>
-              {it.sourceEmailId && (
-                <span className="text-ink-3 shrink-0" title={it.sourceSubject ? `来自邮件：${it.sourceSubject}` : '来自邮件'}>
-                  <Paperclip size={12} />
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => del(it.id)}
-                className="opacity-0 group-hover:opacity-100 text-ink-3 hover:text-ember shrink-0"
-                aria-label="删除待办"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
-        </div>
-        {(!items || items.length === 0) && (
-          <div className="text-ink-3 text-sm text-center py-3">还没有待办，添加一项开始吧 ✨</div>
+          onChange={(e) => setInput(e.target.value)}
+          onPressEnter={add}
+          placeholder="新增一项待办..."
+        />
+        <Button type="primary" onClick={add}>添加</Button>
+      </Space.Compact>
+      <List
+        split
+        dataSource={items ?? []}
+        locale={{ emptyText: '还没有待办，添加一项开始吧。' }}
+        renderItem={(it) => (
+          <List.Item actions={[<Button key="delete" size="small" danger onClick={() => del(it.id)}>删除</Button>]}>
+            <Flex align="center" gap={10} className="full-width">
+              <Checkbox checked={it.done} onChange={() => toggle(it)} />
+              <Typography.Text delete={it.done} type={it.done ? 'secondary' : undefined} ellipsis>
+                {it.text}
+              </Typography.Text>
+              {it.sourceEmailId && <Badge color="blue" title={it.sourceSubject ? `来自邮件：${it.sourceSubject}` : '来自邮件'} />}
+            </Flex>
+          </List.Item>
         )}
+      />
 
-        {suggestions.length > 0 && (
-          <div className="mt-3 pt-2.5 border-t border-rule">
-            <div className="flex items-center gap-2 mb-1">
-              <Lightbulb size={12} className="text-ember shrink-0" />
-              <span className="kicker">建议待办 · 来自邮件</span>
-              <span className="num text-ink-3 text-[11px]">{suggestions.length}</span>
-            </div>
-            <div className="divide-y divide-rule">
-              {suggestions.map((s) => (
-                <div key={s.id} className="py-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ background: colorForAccount(s.sourceAccountId) }}
-                      title={s.from}
-                    />
-                    <div className="flex-1 text-sm text-ink truncate">{s.text}</div>
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onPress={() => confirmSuggestion(s)}
-                      aria-label="转为正式待办"
-                    >
-                      <Check size={12} /> 确认
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="tertiary"
-                      onPress={() => ignoreSuggestion(s)}
-                      aria-label="忽略此建议"
-                    >
-                      <X size={14} /> 忽略
-                    </Button>
-                  </div>
-                  <div className="text-[10px] text-ink-3 truncate pl-4 mt-0.5">↳ {s.from}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+      {suggestions.length > 0 && (
+        <>
+          <WidgetHeader title="建议待办 · 来自邮件" right={suggestions.length} />
+          <List
+            split
+            dataSource={suggestions}
+            renderItem={(s) => (
+              <List.Item
+                actions={[
+                  <Button key="confirm" size="small" type="primary" onClick={() => confirmSuggestion(s)}>确认</Button>,
+                  <Button key="ignore" size="small" onClick={() => ignoreSuggestion(s)}>忽略</Button>,
+                ]}
+              >
+                <List.Item.Meta
+                  avatar={<Badge color={colorForAccount(s.sourceAccountId)} />}
+                  title={s.text}
+                  description={s.from}
+                />
+              </List.Item>
+            )}
+          />
+        </>
+      )}
+    </Flex>
   );
 }

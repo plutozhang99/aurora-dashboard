@@ -1,13 +1,14 @@
+import { Flex, Statistic, Tag, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Chip } from '@heroui/react';
 import { useStore } from '@/lib/store';
 import { fetchWeather, weatherIcon } from '@/lib/weather';
+import { WidgetHeader } from './CalendarWidget';
 
-/** Current date + time + weather. Type scales with the widget's own height. */
 export function NowWidget() {
   const s = useStore((st) => st.settings);
   const [now, setNow] = useState(new Date());
+
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
@@ -28,43 +29,31 @@ export function NowWidget() {
   const today = data?.daily?.[0];
 
   return (
-    <div className="h-full w-full flex flex-col" style={{ containerType: 'size' }}>
-      <div className="sec-head">
-        <span className="kicker truncate">此刻 · Now</span>
-        {data && <Chip size="sm" color="default" variant="soft" className="shrink-0">{wc?.label}</Chip>}
-      </div>
+    <Flex vertical className="widget-content now-widget">
+      <WidgetHeader title="此刻 · Now" right={data ? wc?.label : undefined} />
+      <Flex className="now-main" align="center" justify="space-between" gap={20}>
+        <Flex vertical gap={8} className="now-time">
+          <Typography.Title level={1} className="clock-title">
+            {hh}:{mm}<Typography.Text type="secondary" className="clock-seconds">{ss}</Typography.Text>
+          </Typography.Title>
+          <Typography.Text className="num">{dateStr}</Typography.Text>
+        </Flex>
 
-      <div className="flex-1 min-h-0 flex items-center justify-between gap-6 mt-3">
-        {/* time + date */}
-        <div className="min-w-0">
-          <div className="font-display font-semibold leading-none text-ink tracking-tight tabular-nums text-[clamp(2.75rem,24cqh,6rem)]">
-            {hh}:{mm}
-            <span className="num text-ink-3 align-top ml-1.5 text-[0.3em]">{ss}</span>
-          </div>
-          <div className="num text-ink-2 uppercase tracking-[0.1em] mt-3 text-[clamp(0.85rem,5.5cqh,1.15rem)]">
-            {dateStr}
-          </div>
-        </div>
-
-        {/* weather */}
         {data ? (
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="leading-none text-[clamp(2.25rem,18cqh,5rem)]">{wc?.emoji}</div>
-            <div className="text-right">
-              <div className="font-display font-semibold leading-none text-ink text-[clamp(1.6rem,15cqh,3.25rem)]">
-                {Math.round(data.temperature)}
-                <span className="num text-ink-3 align-top text-[0.38em]">{unit}</span>
-              </div>
-              <div className="num text-ink-2 mt-2 text-[clamp(0.75rem,5cqh,1rem)]">
+          <Flex className="now-weather" align="center" justify="flex-end" gap={14}>
+            <Typography.Text className="weather-emoji">{wc?.emoji}</Typography.Text>
+            <Flex vertical align="flex-end">
+              <Statistic className="weather-stat" value={Math.round(data.temperature)} suffix={unit} />
+              <Tag className="weather-tag">
                 {s.weatherCityLabel}
-                {today && <span className="text-ink-3"> · ↑{Math.round(today.max)}° ↓{Math.round(today.min)}°</span>}
-              </div>
-            </div>
-          </div>
+                {today ? ` · ↑${Math.round(today.max)}° ↓${Math.round(today.min)}°` : ''}
+              </Tag>
+            </Flex>
+          </Flex>
         ) : (
-          <div className="num text-ink-4 text-sm shrink-0">天气 —</div>
+          <Typography.Text type="secondary">天气 --</Typography.Text>
         )}
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }

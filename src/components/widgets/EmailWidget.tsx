@@ -1,13 +1,12 @@
+import { Alert, Badge, Button, Flex, List, Typography } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mail, Check } from 'lucide-react';
 import { useEffect } from 'react';
-import { Button } from '@heroui/react';
 import { useStore } from '@/lib/store';
 import { api, apiAvailable } from '@/lib/api';
 import { db } from '@/lib/storage';
 import { colorForAccount } from '@/lib/accountColors';
 import type { AppSettings, EmailItem, EmailAccount, AccountError } from '@/types';
-import { Header, BackendDownNotice } from './CalendarWidget';
+import { BackendDownNotice, WidgetHeader } from './CalendarWidget';
 
 interface ImportantResponse {
   items: EmailItem[];
@@ -88,49 +87,47 @@ export function EmailWidget() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <Header icon={<Mail size={14} className="text-ember" />} title="重要邮件 · Inbox" right={`聚合 · ${visible.length}`} />
-      <div className="flex-1 min-h-0 scroll-area mt-3">
-        {isLoading && accounts.length > 0 && <div className="text-ink-3 text-sm">收取中…</div>}
-        {data && !data.hasBackend && <BackendDownNotice />}
-        {data?.hasBackend && accounts.length === 0 && (
-          <div className="text-ink-3 text-sm leading-relaxed">未添加邮箱账户 — 设置 → 邮件 中添加并启用后再启动本地后端。</div>
+    <Flex vertical className="widget-content">
+      <WidgetHeader title="重要邮件 · Inbox" right={`聚合 · ${visible.length}`} />
+      {isLoading && accounts.length > 0 && <Typography.Text type="secondary">收取中...</Typography.Text>}
+      {data && !data.hasBackend && <BackendDownNotice />}
+      {data?.hasBackend && accounts.length === 0 && (
+        <Typography.Paragraph type="secondary">未添加邮箱账户，请在设置 → 邮件中添加并启用后再启动本地后端。</Typography.Paragraph>
+      )}
+      {data?.hasBackend && errors.length > 0 && (
+        <Alert
+          type="warning"
+          message={`${errors.length} 个账户收取失败`}
+          description={errors.map((e) => accountLabel(e.accountId) || e.accountId).join('、')}
+        />
+      )}
+      {data?.hasBackend && !isLoading && accounts.length > 0 && visible.length === 0 && errors.length === 0 && (
+        <Typography.Text type="secondary">没有需要关注的邮件。</Typography.Text>
+      )}
+      <List
+        split
+        dataSource={visible}
+        renderItem={(m) => (
+          <List.Item
+            actions={[
+              <Button key="dismiss" size="small" onClick={() => dismiss(m.id)}>
+                已查看
+              </Button>,
+            ]}
+          >
+            <List.Item.Meta
+              avatar={<Badge color={colorForAccount(m.sourceAccountId ?? '')} />}
+              title={<Typography.Text ellipsis>{m.subject || '(无主题)'}</Typography.Text>}
+              description={(
+                <Flex vertical>
+                  <Typography.Text type="secondary" ellipsis>{m.from}</Typography.Text>
+                  <Typography.Text type="secondary" ellipsis>{m.snippet}</Typography.Text>
+                </Flex>
+              )}
+            />
+          </List.Item>
         )}
-        {data?.hasBackend && errors.length > 0 && (
-          <div className="rounded-md bg-ember-soft px-3 py-1.5 text-[11px] text-ember-deep mb-2 num">
-            {errors.length} 个账户收取失败：{errors.map((e) => accountLabel(e.accountId) || e.accountId).join('、')}
-          </div>
-        )}
-        {data?.hasBackend && !isLoading && accounts.length > 0 && visible.length === 0 && errors.length === 0 && (
-          <div className="text-ink-3 text-sm">没有需要关注的邮件 🎉</div>
-        )}
-        <div className="divide-y divide-rule">
-          {visible.map((m) => (
-            <div key={m.id} className="flex items-start gap-3 py-2 group">
-              <Button
-                isIconOnly
-                size="sm"
-                variant="tertiary"
-                onPress={() => dismiss(m.id)}
-                aria-label="标记已查看"
-                className="mt-0.5 w-5 h-5 min-w-0 rounded-md border border-rule"
-              >
-                <Check size={12} className="opacity-0 group-hover:opacity-100" />
-              </Button>
-              <span
-                className="mt-1.5 w-2 h-2 rounded-full shrink-0"
-                style={{ background: colorForAccount(m.sourceAccountId ?? '') }}
-                title={accountLabel(m.sourceAccountId)}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm text-ink truncate">{m.subject || '(无主题)'}</div>
-                <div className="text-[11px] text-ink-2 truncate">{m.from}</div>
-                <div className="text-[11px] text-ink-3 truncate">{m.snippet}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+      />
+    </Flex>
   );
 }
