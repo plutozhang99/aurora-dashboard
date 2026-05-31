@@ -287,11 +287,30 @@ async def extract_todos(
     keywords: list[str],
     llm_fn: LlmFn = llm_json,
 ) -> list[dict[str, Any]]:
-    """Extract actionable todo suggestions for one account (AI + keyword)."""
+    """Extract actionable todo suggestions for one account (AI + keyword).
+
+    AI mode uses the LLM with a per-(account,uid) TTL cache so emails already
+    analysed in a prior poll are not re-sent to the LLM. The cached value is the
+    list of suggestions for that email (an empty list means "analysed, no todo",
+    so it is still a hit and avoids a redundant call). LLM failure falls back to
+    keyword matching for the uncached batch without poisoning the cache.
+    """
     matcher = build_keyword_matcher(keywords or FALLBACK_TODO_KEYWORDS)
 
     if not _use_ai(mode, ai) or not messages:
         return keyword_todos(account_id, messages, matcher)
+
+    cached: list[dict[str, Any]] = []
+    need_llm: list[FetchedEmail] = []
+    for m in messages:
+        hit = cache_get(f"{account_id}:todo:{m['uid']}")
+        if hit is not _MISSING:
+            cached.extend(hit)
+        else:
+            need_llm.append(m)
+
+    if not need_llm:
+        return cached
 
     try:
         out = await llm_fn(
@@ -300,14 +319,16 @@ async def extract_todos(
             model=ai.model,
             base_url=ai.baseUrl,
             system=prompt or "",
-            user=json.dumps({"emails": [compact_for_llm(m) for m in messages]}),
+            user=json.dumps({"emails": [compact_for_llm(m) for m in need_llm]}),
         )
         arr = out.get("todos") if isinstance(out, dict) else None
         arr = arr if isinstance(arr, list) else []
         # Coerce both sides to str: prod uids are strings (imap-tools), while
         # the LLM returns uids as JSON ints.
-        by_uid = {str(m["uid"]): m for m in messages}
-        suggestions: list[dict[str, Any]] = []
+        by_uid = {str(m["uid"]): m for m in need_llm}
+        # One bucket per email (incl. emails with no todo) so a negative result
+        # is cached too — keyed by the canonical email uid.
+        per_uid: dict[Any, list[dict[str, Any]]] = {m["uid"]: [] for m in need_llm}
         for e in arr:
             if not isinstance(e, dict):
                 continue
@@ -319,7 +340,7 @@ async def extract_todos(
             # Build ids from the canonical email uid (src["uid"]), not the
             # LLM-returned uid, so sourceEmailId == the email's local_email_id.
             canonical_uid = src["uid"]
-            suggestions.append(
+            per_uid[canonical_uid].append(
                 {
                     "id": f"t-{account_id}-{canonical_uid}",
                     "text": text[:140],
@@ -329,7 +350,13 @@ async def extract_todos(
                     "subject": src.get("subject", ""),
                 }
             )
-        return suggestions
+        extracted: list[dict[str, Any]] = []
+        for m in need_llm:
+            items = per_uid[m["uid"]]
+            cache_set(f"{account_id}:todo:{m['uid']}", items)
+            extracted.extend(items)
+        return cached + extracted
     except LLMError:
-        # LLM failure → keyword fallback for this batch (no whole-request fail).
-        return keyword_todos(account_id, messages, matcher)
+        # Don't poison cache on transient LLM failure — keyword fallback for the
+        # uncached batch, merged with the cached suggestions for this request.
+        return cached + keyword_todos(account_id, need_llm, matcher)

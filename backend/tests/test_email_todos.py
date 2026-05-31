@@ -112,3 +112,73 @@ def test_todos_endpoint_dedups_same_email_across_accounts(monkeypatch):
     # Deduped to one even though seen on two accounts (same Message-ID).
     assert len(suggestions) == 1
     assert suggestions[0]["sourceAccountId"] == "accA"
+
+
+async def test_extract_todos_ai_caches_per_account():
+    msgs = [make_email(1, frm="boss@x.com", subject="Report")]
+    calls = {"n": 0}
+
+    async def fake_llm(**kwargs):
+        calls["n"] += 1
+        return {"todos": [{"uid": 1, "text": "Send the report"}]}
+
+    ai = AIConfig(provider="anthropic", apiKey="k", model=None)
+    a = await extract_todos("accA", msgs, ai=ai, prompt="p", mode="ai", keywords=[], llm_fn=fake_llm)
+    b = await extract_todos("accA", msgs, ai=ai, prompt="p", mode="ai", keywords=[], llm_fn=fake_llm)
+    assert calls["n"] == 1  # second call served from cache, no re-analysis
+    assert a == b
+    assert b[0]["text"] == "Send the report"
+
+    # Different account -> cache key differs -> new LLM call.
+    await extract_todos("accB", msgs, ai=ai, prompt="p", mode="ai", keywords=[], llm_fn=fake_llm)
+    assert calls["n"] == 2
+
+
+async def test_extract_todos_negative_result_is_cached():
+    # An email the LLM judged to have no todo must still be cached so the next
+    # poll does not re-send it to the LLM.
+    msgs = [make_email(1, subject="newsletter")]
+    calls = {"n": 0}
+
+    async def fake_llm(**kwargs):
+        calls["n"] += 1
+        return {"todos": []}
+
+    ai = AIConfig(provider="anthropic", apiKey="k", model=None)
+    assert await extract_todos("accA", msgs, ai=ai, prompt="p", mode="ai", keywords=[], llm_fn=fake_llm) == []
+    assert await extract_todos("accA", msgs, ai=ai, prompt="p", mode="ai", keywords=[], llm_fn=fake_llm) == []
+    assert calls["n"] == 1
+
+
+async def test_extract_todos_llm_error_does_not_poison_cache():
+    msgs = [make_email(1, subject="please submit", snippet="x")]
+
+    async def boom(**kwargs):
+        raise classify.LLMError("down")
+
+    ai = AIConfig(provider="anthropic", apiKey="k", model=None)
+    out = await extract_todos(
+        "accA", msgs, ai=ai, prompt="p", mode="ai", keywords=["please"], llm_fn=boom
+    )
+    assert len(out) == 1  # keyword fallback for the uncached batch
+    assert classify.cache_get("accA:todo:1") is classify._MISSING
+
+
+async def test_extract_todos_mixed_cached_and_new():
+    # First poll analyses uid 1; second poll adds uid 2 -> only uid 2 hits the
+    # LLM, and both suggestions come back.
+    ai = AIConfig(provider="anthropic", apiKey="k", model=None)
+    calls = {"n": 0}
+
+    async def fake_llm(**kwargs):
+        calls["n"] += 1
+        # Return a todo for both uids each call; classify only matches uids it
+        # actually sent (need_llm), so cached ones are ignored.
+        return {"todos": [{"uid": 1, "text": "do 1"}, {"uid": 2, "text": "do 2"}]}
+
+    await extract_todos("accA", [make_email(1)], ai=ai, prompt="p", mode="ai", keywords=[], llm_fn=fake_llm)
+    out = await extract_todos(
+        "accA", [make_email(1), make_email(2)], ai=ai, prompt="p", mode="ai", keywords=[], llm_fn=fake_llm
+    )
+    assert calls["n"] == 2  # second call still hit the LLM (uid 2 was uncached)
+    assert {s["sourceEmailId"] for s in out} == {"m-accA-1", "m-accA-2"}
