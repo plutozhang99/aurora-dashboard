@@ -11,6 +11,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host",
     "start": "uvicorn app.main:app --host 0.0.0.0 --port 5174 --app-dir backend",
+    "deploy": "bash scripts/deploy.sh",
     "test": "vitest run",
     "lint": "eslint ."
   },

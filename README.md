@@ -47,13 +47,19 @@ npm run dev
 
 ## 部署（Docker，单镜像）
 
-最省事的方式是单镜像多阶段构建（前端 `vite build` → Python 运行时托管 `dist/` + `/api`，单端口）：
+最省事的方式是一键脚本——它问你如何暴露（仅本机 / 仅 Tailscale / 局域网）、生成 `.env`、构建启动并做健康检查，**默认仅本机**：
+
+```bash
+npm run deploy                 # = bash scripts/deploy.sh
+```
+
+或手动单镜像多阶段构建（前端 `vite build` → Python 运行时托管 `dist/` + `/api`，单端口）：
 
 ```bash
 docker compose up --build      # 然后打开 http://localhost:5174/
 ```
 
-详见 [docs/DEPLOY.md](docs/DEPLOY.md)（端口、env、数据存储、PWA 安装）。
+想人在外面经 **Tailscale** 访问、其余时候访问不到：部署时选「仅 Tailscale」，把端口绑到本机 `100.x.y.z`（只在 tailnet 内可路由）。详见 [docs/DEPLOY.md](docs/DEPLOY.md)（部署脚本、端口、env、远程访问、数据存储、PWA 安装）。
 
 ## 测试
 

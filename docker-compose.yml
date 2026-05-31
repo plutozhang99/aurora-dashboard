@@ -6,7 +6,12 @@ services:
     image: aurora-dashboard
     container_name: aurora-dashboard
     ports:
-      - "5174:5174"
+      # Host-side bind IP + port come from .env (written by scripts/deploy.sh).
+      # Default 127.0.0.1 = this machine only. Set AURORA_BIND_IP to your
+      # Tailscale IP (100.x.y.z) to expose ONLY over the tailnet, or 0.0.0.0 for
+      # the whole LAN. The container always listens on 0.0.0.0:5174 internally;
+      # the host publish address is what actually restricts who can reach it.
+      - "${AURORA_BIND_IP:-127.0.0.1}:${AURORA_HOST_PORT:-5174}:5174"
     environment:
       AURORA_HOST: "0.0.0.0"
       AURORA_PORT: "5174"
