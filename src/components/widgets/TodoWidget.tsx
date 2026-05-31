@@ -1,5 +1,6 @@
-import { Badge, Button, Checkbox, Flex, Input, List, Space, Typography } from 'antd';
+import { Badge, Button, Checkbox, DatePicker, Flex, Input, List, Modal, Space, Typography } from 'antd';
 import { useState } from 'react';
+import dayjs, { type Dayjs } from 'dayjs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { activeSuggestions } from '@/lib/storage';
 import {
@@ -39,6 +40,13 @@ export function TodoWidget() {
   const qc = useQueryClient();
   const [input, setInput] = useState('');
   const [showDone, setShowDone] = useState(false);
+  // Detail modal: the todo being viewed plus an editable draft of its fields.
+  const [detail, setDetail] = useState<TodoItem | null>(null);
+  const [draft, setDraft] = useState<{ text: string; note: string; due: Dayjs | null }>({
+    text: '',
+    note: '',
+    due: null,
+  });
 
   const { data: todoData } = useQuery({
     queryKey: ['todos'],
@@ -92,6 +100,13 @@ export function TodoWidget() {
     onSuccess: invalidateTodos,
   });
   const delMut = useMutation({ mutationFn: deleteTodo, onSuccess: invalidateTodos });
+  const saveMut = useMutation({
+    mutationFn: (it: TodoItem) => putTodo(it),
+    onSuccess: () => {
+      invalidateTodos();
+      setDetail(null);
+    },
+  });
   // Confirming writes a todo whose sourceEmailId then hides the suggestion.
   const confirmMut = useMutation({ mutationFn: confirmSuggestionRemote, onSuccess: invalidateTodos });
   const ignoreMut = useMutation({
@@ -112,18 +127,54 @@ export function TodoWidget() {
     setInput('');
   }
 
+  function openDetail(it: TodoItem) {
+    setDetail(it);
+    setDraft({
+      text: it.text,
+      note: it.note ?? '',
+      due: it.dueDate ? dayjs(it.dueDate) : null,
+    });
+  }
+
+  function saveDetail() {
+    if (!detail) return;
+    const text = draft.text.trim();
+    if (!text) return;
+    saveMut.mutate({
+      ...detail,
+      text,
+      note: draft.note.trim() || undefined,
+      dueDate: draft.due ? draft.due.format('YYYY-MM-DD') : undefined,
+    });
+  }
+
   const incomplete = items.filter((i) => !i.done);
   const completed = items.filter((i) => i.done);
 
   const renderTodo = (it: TodoItem) => (
-    <List.Item actions={[<Button key="delete" size="small" danger onClick={() => delMut.mutate(it.id)}>删除</Button>]}>
-      <Flex align="center" gap={10} className="full-width">
-        <Checkbox checked={it.done} onChange={() => toggleMut.mutate(it)} />
+    <List.Item
+      className="todo-item"
+      actions={[
+        <Button
+          key="delete"
+          size="small"
+          type="text"
+          danger
+          onClick={() => delMut.mutate(it.id)}
+        >
+          删除
+        </Button>,
+      ]}
+    >
+      <Checkbox checked={it.done} onChange={() => toggleMut.mutate(it)} />
+      <button type="button" className="todo-open" onClick={() => openDetail(it)} title="查看 / 编辑详情">
         <Typography.Text delete={it.done} type={it.done ? 'secondary' : undefined} ellipsis>
           {it.text}
         </Typography.Text>
+        {it.note && <Badge color="gold" title="有附加信息" />}
+        {it.dueDate && <span className="todo-due">{it.dueDate}</span>}
         {it.sourceEmailId && <Badge color="blue" title={it.sourceSubject ? `来自邮件：${it.sourceSubject}` : '来自邮件'} />}
-      </Flex>
+      </button>
     </List.Item>
   );
 
@@ -180,6 +231,59 @@ export function TodoWidget() {
           />
         </>
       )}
+
+      <Modal
+        open={!!detail}
+        title="待办详情"
+        okText="保存"
+        cancelText="关闭"
+        onOk={saveDetail}
+        onCancel={() => setDetail(null)}
+        okButtonProps={{ disabled: !draft.text.trim(), loading: saveMut.isPending }}
+        destroyOnHidden
+      >
+        {detail && (
+          <Flex vertical gap={14} className="todo-detail">
+            <label className="todo-field">
+              <Typography.Text type="secondary">内容</Typography.Text>
+              <Input.TextArea
+                value={draft.text}
+                onChange={(e) => setDraft((d) => ({ ...d, text: e.target.value }))}
+                autoSize={{ minRows: 1, maxRows: 4 }}
+                placeholder="待办内容"
+              />
+            </label>
+            <label className="todo-field">
+              <Typography.Text type="secondary">截止日期</Typography.Text>
+              <DatePicker
+                value={draft.due}
+                onChange={(d) => setDraft((prev) => ({ ...prev, due: d }))}
+                className="full-width"
+                placeholder="选择截止日期"
+              />
+            </label>
+            <label className="todo-field">
+              <Typography.Text type="secondary">附加信息 · 备注</Typography.Text>
+              <Input.TextArea
+                value={draft.note}
+                onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))}
+                autoSize={{ minRows: 3, maxRows: 8 }}
+                placeholder="补充说明、链接、相关上下文……"
+              />
+            </label>
+            <Flex gap={16} wrap>
+              <Typography.Text type="secondary">
+                创建于 {new Date(detail.createdAt).toLocaleString()}
+              </Typography.Text>
+              {detail.sourceSubject && (
+                <Typography.Text type="secondary" ellipsis title={detail.sourceSubject}>
+                  来自邮件：{detail.sourceSubject}
+                </Typography.Text>
+              )}
+            </Flex>
+          </Flex>
+        )}
+      </Modal>
     </Flex>
   );
 }

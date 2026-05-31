@@ -37,6 +37,8 @@ export interface TodoItem {
   text: string;
   done: boolean;
   dueDate?: string;
+  /** Free-form extra info the user can edit from the to-do detail modal. */
+  note?: string;
   createdAt: number;
   /** When this todo was confirmed from an email suggestion, the source email refs. */
   sourceEmailId?: string;
