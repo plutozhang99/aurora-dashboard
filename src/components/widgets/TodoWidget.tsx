@@ -12,6 +12,7 @@ import {
 } from '@/lib/dataStore';
 import { useStore } from '@/lib/store';
 import { api, apiAvailable } from '@/lib/api';
+import { aiPayload } from '@/lib/ai';
 import { colorForAccount } from '@/lib/accountColors';
 import type { AppSettings, EmailAccount, TodoItem, TodoSuggestion, AccountError } from '@/types';
 import { BackendDownNotice, WidgetHeader } from './CalendarWidget';
@@ -70,9 +71,7 @@ export function TodoWidget() {
           accounts,
           mode: settings.emailImportanceMode,
           keywords: settings.emailImportanceKeywords,
-          ai: settings.aiProvider !== 'none' && settings.aiApiKey
-            ? { provider: settings.aiProvider, apiKey: settings.aiApiKey, model: settings.aiModel }
-            : undefined,
+          ai: aiPayload(settings),
           prompt: settings.prompts.emailTodo,
         }),
       }).catch(() => ({ suggestions: [] as TodoSuggestion[], errors: null }));

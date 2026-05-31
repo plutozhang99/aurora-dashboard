@@ -28,9 +28,12 @@ class EmailAccount(BaseModel):
 
 
 class AIConfig(BaseModel):
-    provider: Literal["anthropic", "openai"] | str | None = None
+    provider: Literal["anthropic", "openai", "deepseek", "ollama"] | str | None = None
     apiKey: str | None = None
     model: str | None = None
+    # Optional override of the provider's default base URL — required for a
+    # non-default Ollama host (e.g. http://192.168.x.x:11434/v1); ignored when blank.
+    baseUrl: str | None = None
 
 
 class EmailRequest(BaseModel):

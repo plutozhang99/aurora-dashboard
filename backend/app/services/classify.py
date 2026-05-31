@@ -157,6 +157,7 @@ async def classify_important(
                 provider=ai.provider,
                 api_key=ai.apiKey,
                 model=ai.model,
+                base_url=ai.baseUrl,
                 system=prompt or "",
                 user=json.dumps({"emails": [compact_for_llm(m) for m in need_llm]}),
             )
@@ -217,6 +218,7 @@ async def classify_schedule(
                 provider=ai.provider,
                 api_key=ai.apiKey,
                 model=ai.model,
+                base_url=ai.baseUrl,
                 system=prompt or "",
                 user=json.dumps(
                     {
@@ -296,6 +298,7 @@ async def extract_todos(
             provider=ai.provider,
             api_key=ai.apiKey,
             model=ai.model,
+            base_url=ai.baseUrl,
             system=prompt or "",
             user=json.dumps({"emails": [compact_for_llm(m) for m in messages]}),
         )

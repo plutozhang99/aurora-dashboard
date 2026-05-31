@@ -23,11 +23,25 @@ import { inferImapConfig } from '@/lib/imapConfig';
 import { colorForAccount } from '@/lib/accountColors';
 import type { AppSettings, WidgetInstance, PromptOverrides, EmailAccount } from '@/types';
 import { DEFAULT_PROMPTS, DEFAULT_EMAIL_KEYWORDS, DEFAULT_SCHEDULE_KEYWORDS } from '@/types';
+import { aiConfigured } from '@/lib/ai';
 
 type TabKey =
   | 'general' | 'weather' | 'email' | 'briefing' | 'ai' | 'prompts' | 'news' | 'widgets';
 
 const TAB_KEYS: TabKey[] = ['general', 'weather', 'email', 'briefing', 'ai', 'prompts', 'news', 'widgets'];
+
+// Per-provider hints for the AI tab. Keyed by AppSettings['aiProvider'].
+const AI_MODEL_PLACEHOLDER: Record<string, string> = {
+  anthropic: 'claude-sonnet-4-6',
+  openai: 'gpt-4o-mini',
+  deepseek: 'deepseek-chat / deepseek-reasoner',
+  ollama: 'llama3.1 / qwen2.5（需先 ollama pull）',
+};
+const AI_PROVIDER_HINT: Record<string, string> = {
+  deepseek: 'DeepSeek 兼容 OpenAI 接口，默认走 https://api.deepseek.com，在官网控制台申请 Key。',
+  ollama: 'Ollama 在本机/局域网运行、无需 Key：先 `ollama serve` 并 `ollama pull` 上面的模型，确保后端能访问其地址即可。',
+  default: '直连 provider 时如遇 CORS，可启动本地后端并设置本地后端 API 地址由后端转发。',
+};
 
 export function SettingsPanel() {
   const open = useUI((s) => s.settingsOpen);
@@ -166,16 +180,25 @@ export function SettingsPanel() {
                   { value: 'none', label: '未配置' },
                   { value: 'anthropic', label: 'Anthropic Claude' },
                   { value: 'openai', label: 'OpenAI' },
+                  { value: 'deepseek', label: 'DeepSeek' },
+                  { value: 'ollama', label: 'Ollama（本地，无需 Key）' },
                 ]}
               />
             </Form.Item>
-            <Form.Item label="API Key (本机存储)">
-              <Input.Password value={draft.aiApiKey} onChange={(e) => up('aiApiKey', e.target.value)} />
-            </Form.Item>
+            {draft.aiProvider !== 'ollama' && (
+              <Form.Item label="API Key (本机存储)">
+                <Input.Password value={draft.aiApiKey} onChange={(e) => up('aiApiKey', e.target.value)} />
+              </Form.Item>
+            )}
             <Form.Item label="模型">
-              <Input value={draft.aiModel} onChange={(e) => up('aiModel', e.target.value)} placeholder="claude-sonnet-4-6 / gpt-4o-mini" />
+              <Input value={draft.aiModel} onChange={(e) => up('aiModel', e.target.value)} placeholder={AI_MODEL_PLACEHOLDER[draft.aiProvider] ?? 'claude-sonnet-4-6'} />
             </Form.Item>
-            <Typography.Text type="secondary">直连 provider 时如遇 CORS，可启动本地后端并设置本地后端 API 地址由后端转发。</Typography.Text>
+            {draft.aiProvider === 'ollama' && (
+              <Form.Item label="Ollama 地址" help="留空用默认 http://localhost:11434/v1；远程主机填 http://IP:11434/v1。后端需能访问该地址。">
+                <Input value={draft.aiBaseUrl} onChange={(e) => up('aiBaseUrl', e.target.value)} placeholder="http://localhost:11434/v1" />
+              </Form.Item>
+            )}
+            <Typography.Text type="secondary">{AI_PROVIDER_HINT[draft.aiProvider] ?? AI_PROVIDER_HINT.default}</Typography.Text>
           </Space>
         )}
 
@@ -389,7 +412,7 @@ function PromptsTab({
 }) {
   const prompts = draft.prompts;
   const setPrompts = (next: PromptOverrides) => up('prompts', next);
-  const hasAi = draft.aiProvider !== 'none' && !!draft.aiApiKey;
+  const hasAi = aiConfigured(draft);
 
   return (
     <Space direction="vertical" size={18} className="full-width">

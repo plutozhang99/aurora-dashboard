@@ -2,6 +2,7 @@ import { Alert, Badge, Divider, Flex, List, Tag, Typography } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { useStore } from '@/lib/store';
 import { api, apiAvailable } from '@/lib/api';
+import { aiPayload } from '@/lib/ai';
 import { colorForAccount } from '@/lib/accountColors';
 import { todayStr } from '@/lib/briefingTrigger';
 import type { AppSettings, EmailAccount, AccountError } from '@/types';
@@ -35,9 +36,7 @@ export function CalendarWidget() {
           accounts,
           mode: settings.scheduleMode,
           keywords: settings.scheduleHintKeywords,
-          ai: settings.aiProvider !== 'none' && settings.aiApiKey
-            ? { provider: settings.aiProvider, apiKey: settings.aiApiKey, model: settings.aiModel }
-            : undefined,
+          ai: aiPayload(settings),
           prompt: settings.prompts.scheduleExtract,
           today: todayStr(new Date()),
         }),

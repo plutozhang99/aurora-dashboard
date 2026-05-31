@@ -92,7 +92,8 @@ AURORA_HOST=0.0.0.0 AURORA_DIST_DIR=$PWD/dist \
 **所有配置都在 UI 内完成**（右上角「设置」），无需 env 或配置文件：
 
 - **邮件账户** —— 设置 ▸ 邮件：加 IMAP 账户（常见邮箱按域名自动推断 host/port/SSL，通常只填邮箱 + 应用专用密码）。
-- **AI key** —— 设置 ▸ AI：选 Anthropic / OpenAI、填 key 与模型。未配置则邮件/日程/待办走关键词、晨报走结构化拼接。
+- **AI key** —— 设置 ▸ AI：选 **Anthropic / OpenAI / DeepSeek** 填 key 与模型，或选 **Ollama**（本地，无需 key，留空地址即用 `http://localhost:11434/v1`，远程主机填 `http://IP:11434/v1`）。未配置则邮件/日程/待办走关键词、晨报走结构化拼接。
+  - DeepSeek、Ollama 均兼容 OpenAI 接口，由后端用 OpenAI SDK 加对应 `base_url` 转发。**关键：调用方是后端，不是浏览器**——若后端跑在 Docker 里，容器内的 `localhost` 不是宿主机。此时 Ollama 地址要填 `http://host.docker.internal:11434/v1`（Docker Desktop）或宿主机局域网 IP；裸机部署才可用默认 `localhost`。
 - **清晨时间 / 语音引擎 / 提示词** —— 设置 ▸ 晨报 / Prompts 标签页。
 
 ## 数据存储与隐私

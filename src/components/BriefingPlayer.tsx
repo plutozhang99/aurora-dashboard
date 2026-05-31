@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Card, Flex, Space, Typography } from 'antd';
 import { useStore } from '@/lib/store';
 import { api, apiAvailable } from '@/lib/api';
+import { aiPayload } from '@/lib/ai';
 import {
   loadBriefing,
   saveBriefing,
@@ -65,9 +66,7 @@ export function BriefingPlayer() {
         body: JSON.stringify({
           accounts,
           newsFeeds: settings.newsFeeds,
-          ai: settings.aiProvider !== 'none' && settings.aiApiKey
-            ? { provider: settings.aiProvider, apiKey: settings.aiApiKey, model: settings.aiModel }
-            : undefined,
+          ai: aiPayload(settings),
           prompts: { briefing: settings.prompts.briefingSummary },
           today: todayStr(),
         }),

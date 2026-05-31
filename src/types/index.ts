@@ -122,10 +122,13 @@ export interface AppSettings {
   // Email (IMAP) — multiple accounts, aggregated by the backend.
   emailAccounts: EmailAccount[];
 
-  // AI provider
-  aiProvider: 'anthropic' | 'openai' | 'none';
+  // AI provider. 'ollama' is local & keyless; the rest need aiApiKey.
+  aiProvider: 'anthropic' | 'openai' | 'deepseek' | 'ollama' | 'none';
   aiApiKey: string;
   aiModel: string;
+  /** Override the provider's default base URL. Needed for a non-default Ollama
+   *  host (e.g. http://192.168.x.x:11434/v1); blank = provider default. */
+  aiBaseUrl: string;
 
   // Server URL (optional, blank = same origin /api)
   serverUrl: string;
@@ -165,6 +168,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   aiProvider: 'none',
   aiApiKey: '',
   aiModel: 'claude-sonnet-4-6',
+  aiBaseUrl: '',
   serverUrl: '',
   morningTime: '06:00',
   ttsEngine: 'browser',

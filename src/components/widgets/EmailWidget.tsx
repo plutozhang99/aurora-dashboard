@@ -2,6 +2,7 @@ import { Alert, Badge, Button, Flex, List, Typography } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useStore } from '@/lib/store';
 import { api, apiAvailable } from '@/lib/api';
+import { aiPayload } from '@/lib/ai';
 import { dismissEmailRemote, listDismissedEmails } from '@/lib/dataStore';
 import { colorForAccount } from '@/lib/accountColors';
 import type { AppSettings, EmailItem, EmailAccount, AccountError } from '@/types';
@@ -39,9 +40,7 @@ export function EmailWidget() {
           accounts,
           mode: settings.emailImportanceMode,
           keywords: settings.emailImportanceKeywords,
-          ai: settings.aiProvider !== 'none' && settings.aiApiKey
-            ? { provider: settings.aiProvider, apiKey: settings.aiApiKey, model: settings.aiModel }
-            : undefined,
+          ai: aiPayload(settings),
           prompt: settings.prompts.emailImportance,
         }),
       }).catch(() => ({ items: [] as EmailItem[], errors: null }));

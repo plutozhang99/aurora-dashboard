@@ -15,7 +15,7 @@
 - **Ant Design Masonry 布局** — 使用 AntD Layout / Flex / Grid / Card 自动按列分配 widget，桌面三列、平板两列、手机单列。
 - **PWA** — 添加到主屏后全屏运行，强制横屏 `display: standalone`。
 - **本地优先** — 设置、布局、待办、晨报缓存全部存浏览器 IndexedDB；**IMAP 密码与 AI Key 不离开本机**。
-- **AI 可选** — 配置 Anthropic / OpenAI key 后，邮件重要性判定、日程抽取、待办识别、晨报总结都走 LLM；**未配置则自动降级为关键词 / 结构化拼接**，功能不缺失。
+- **AI 可选 · 多 provider** — 邮件重要性判定、日程抽取、待办识别、晨报总结都可走 LLM，支持 **Anthropic Claude / OpenAI / DeepSeek**（填 key），以及 **Ollama 本地模型**（无需 key，指向 `localhost:11434` 即可）；**未配置则自动降级为关键词 / 结构化拼接**，功能不缺失。
 - **天气** — Open-Meteo，无需 API key。
 - **美 · Illustration Dashboard** — Ant Design v6.4.3 + antd-style 主题：粗黑描边、硬投影、鲜明状态色与插画感控件。
 

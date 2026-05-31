@@ -124,6 +124,7 @@ async def generate_briefing(
             provider=ai.provider,
             api_key=ai.apiKey,
             model=ai.model,
+            base_url=ai.baseUrl,
             system=prompt or "",
             user=json.dumps(
                 _materials_payload(emails=emails, schedule=schedule, news=news, today=today)

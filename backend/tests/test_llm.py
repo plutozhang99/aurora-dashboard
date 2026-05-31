@@ -62,3 +62,42 @@ async def test_llm_json_non_json_response_raises(monkeypatch):
     monkeypatch.setattr("app.services.llm._call_anthropic", fake_call)
     with pytest.raises(LLMError):
         await llm_json(provider="anthropic", api_key="k", model=None, system="s", user="u")
+
+
+async def test_llm_json_routes_deepseek(monkeypatch):
+    async def fake_call(api_key, model, system, user, base_url=None):
+        return '{"ok": true}'
+
+    monkeypatch.setattr("app.services.llm._call_deepseek", fake_call)
+    out = await llm_json(provider="deepseek", api_key="k", model=None, system="s", user="u")
+    assert out == {"ok": True}
+
+
+async def test_llm_json_ollama_needs_no_api_key(monkeypatch):
+    seen = {}
+
+    async def fake_call(api_key, model, system, user, base_url=None):
+        seen["api_key"] = api_key
+        seen["base_url"] = base_url
+        return '{"ok": true}'
+
+    monkeypatch.setattr("app.services.llm._call_ollama", fake_call)
+    # No api_key supplied — Ollama is local and keyless, so this must NOT raise.
+    out = await llm_json(provider="ollama", api_key=None, model="llama3.1", system="s", user="u")
+    assert out == {"ok": True}
+    assert seen["api_key"] is None  # the wrapper substitutes a dummy key downstream
+
+
+async def test_llm_json_base_url_passed_through(monkeypatch):
+    seen = {}
+
+    async def fake_call(api_key, model, system, user, base_url=None):
+        seen["base_url"] = base_url
+        return "{}"
+
+    monkeypatch.setattr("app.services.llm._call_ollama", fake_call)
+    await llm_json(
+        provider="ollama", api_key=None, model=None,
+        system="s", user="u", base_url="http://192.168.1.9:11434/v1",
+    )
+    assert seen["base_url"] == "http://192.168.1.9:11434/v1"
