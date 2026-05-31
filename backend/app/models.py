@@ -52,6 +52,18 @@ class NewsRequest(BaseModel):
     feeds: list[str] = Field(default_factory=list)
 
 
+class TtsRequest(BaseModel):
+    """Body for /api/tts — synthesize ``text`` to MP3 via an edge-tts voice.
+
+    ``rate`` is a Web-Speech-style multiplier (1.0 = normal) and is mapped to
+    edge-tts's ``"+N%"`` form server-side.
+    """
+
+    text: str
+    voice: str = "zh-CN-XiaoxiaoNeural"
+    rate: float = 1.0
+
+
 class BriefingPrompts(BaseModel):
     briefing: str = ""
 

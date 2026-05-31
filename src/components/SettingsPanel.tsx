@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  App as AntdApp,
   Button,
   Card,
   Flex,
@@ -8,6 +9,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Popconfirm,
   Segmented,
   Select,
   Space,
@@ -21,6 +23,10 @@ import { reverseGeocode, locateCurrentCity, isGeoPermissionDenied, GEO_ATTEMPTED
 import { WIDGET_CATALOG } from './widgets';
 import { inferImapConfig } from '@/lib/imapConfig';
 import { colorForAccount } from '@/lib/accountColors';
+import { uid } from '@/lib/id';
+import { api } from '@/lib/api';
+import { clearCache, factoryReset } from '@/lib/maintenance';
+import { AI_MODELS, DEFAULT_MODEL_FOR, modelOptions } from '@/lib/aiModels';
 import type { AppSettings, WidgetInstance, PromptOverrides, EmailAccount } from '@/types';
 import { DEFAULT_PROMPTS, DEFAULT_EMAIL_KEYWORDS, DEFAULT_SCHEDULE_KEYWORDS } from '@/types';
 import { aiConfigured } from '@/lib/ai';
@@ -31,19 +37,23 @@ type TabKey =
 const TAB_KEYS: TabKey[] = ['general', 'weather', 'email', 'briefing', 'ai', 'prompts', 'news', 'widgets'];
 
 // Per-provider hints for the AI tab. Keyed by AppSettings['aiProvider'].
-const AI_MODEL_PLACEHOLDER: Record<string, string> = {
-  anthropic: 'claude-sonnet-4-6',
-  openai: 'gpt-4o-mini',
-  deepseek: 'deepseek-chat / deepseek-reasoner',
-  ollama: 'llama3.1 / qwen2.5（需先 ollama pull）',
-};
 const AI_PROVIDER_HINT: Record<string, string> = {
   deepseek: 'DeepSeek 兼容 OpenAI 接口，默认走 https://api.deepseek.com，在官网控制台申请 Key。',
   ollama: 'Ollama 在本机/局域网运行、无需 Key：先 `ollama serve` 并 `ollama pull` 上面的模型，确保后端能访问其地址即可。',
   default: '直连 provider 时如遇 CORS，可启动本地后端并设置本地后端 API 地址由后端转发。',
 };
 
+// edge-tts 中文神经音色（云端引擎）。需本地后端运行且能联网到微软 TTS。
+const TTS_VOICES = [
+  { value: 'zh-CN-XiaoxiaoNeural', label: '晓晓 · 女声（自然）' },
+  { value: 'zh-CN-XiaoyiNeural', label: '晓伊 · 女声（亲切）' },
+  { value: 'zh-CN-YunxiNeural', label: '云希 · 男声（沉稳）' },
+  { value: 'zh-CN-YunjianNeural', label: '云健 · 男声（浑厚）' },
+  { value: 'zh-CN-YunyangNeural', label: '云扬 · 男声（播音）' },
+];
+
 export function SettingsPanel() {
+  const { message } = AntdApp.useApp();
   const open = useUI((s) => s.settingsOpen);
   const setOpen = useUI((s) => s.setSettingsOpen);
   const settings = useStore((s) => s.settings);
@@ -60,13 +70,20 @@ export function SettingsPanel() {
 
   useEffect(() => setDraft(settings), [settings]);
 
+  // Functional update so two `up` calls in one handler (e.g. provider + model)
+  // don't clobber each other via a stale `draft` closure.
   function up<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
-    setDraft({ ...draft, [key]: value });
+    setDraft((d) => ({ ...d, [key]: value }));
   }
 
   async function save() {
-    await updateSettings(draft);
-    setOpen(false);
+    try {
+      await updateSettings(draft);
+      message.success('设置已保存');
+      setOpen(false);
+    } catch {
+      message.error('保存失败，请重试');
+    }
   }
 
   async function lookupCity() {
@@ -111,10 +128,41 @@ export function SettingsPanel() {
       <div className="settings-tab">
         {key === 'general' && (
           <Space direction="vertical" size={16} className="full-width">
-            <Form.Item label="本地后端 API 地址">
-              <Input value={draft.serverUrl} onChange={(e) => up('serverUrl', e.target.value)} placeholder="http://127.0.0.1:5174/api" />
+            <Form.Item label="主题">
+              <Segmented
+                value={draft.theme}
+                onChange={(v) => up('theme', v as AppSettings['theme'])}
+                options={[
+                  { value: 'system', label: '跟随系统' },
+                  { value: 'light', label: '浅色' },
+                  { value: 'dark', label: '深色' },
+                ]}
+              />
             </Form.Item>
             <SwitchRow label="减弱动画 (省电模式)" checked={draft.reduceMotion} onChange={(v) => up('reduceMotion', v)} />
+            <Form.Item label="本地数据" help="只影响本机浏览器存储；后端的待办/便签不受影响。">
+              <Flex gap={12} wrap="wrap">
+                <Popconfirm
+                  title="清除缓存"
+                  description="清掉晨报缓存与定位标记并重载；设置、邮箱、布局保留。"
+                  okText="清除"
+                  cancelText="取消"
+                  onConfirm={() => clearCache()}
+                >
+                  <Button>清除缓存</Button>
+                </Popconfirm>
+                <Popconfirm
+                  title="恢复出厂设置"
+                  description="清空本机全部本地数据（设置、邮箱账户、AI Key、布局、缓存）并重载，不可撤销。"
+                  okText="恢复出厂"
+                  okButtonProps={{ danger: true }}
+                  cancelText="取消"
+                  onConfirm={() => factoryReset()}
+                >
+                  <Button danger>恢复出厂设置</Button>
+                </Popconfirm>
+              </Flex>
+            </Form.Item>
           </Space>
         )}
 
@@ -161,12 +209,26 @@ export function SettingsPanel() {
                 value={draft.ttsEngine}
                 onChange={(v) => up('ttsEngine', v)}
                 options={[
-                  { value: 'browser', label: '浏览器内置 (免费)' },
-                  { value: 'cloud', label: '云端 TTS (暂未实现)' },
+                  { value: 'browser', label: '浏览器内置 (免费, 离线)' },
+                  { value: 'cloud', label: '云端 edge-tts (免费, 音质更好)' },
                 ]}
               />
             </Form.Item>
-            {draft.ttsEngine === 'cloud' && <Alert type="warning" message="云端 TTS 尚未实现，当前会回退到浏览器内置语音。" />}
+            {draft.ttsEngine === 'cloud' && (
+              <>
+                <Form.Item label="云端音色">
+                  <Select
+                    value={draft.ttsVoice}
+                    onChange={(v) => up('ttsVoice', v)}
+                    options={TTS_VOICES}
+                  />
+                </Form.Item>
+                <Alert
+                  type="info"
+                  message="云端 edge-tts 由本地后端调用微软免费 TTS，无需 API Key，但需后端运行且能联网；联网失败时自动回退到浏览器内置语音。"
+                />
+              </>
+            )}
           </Space>
         )}
 
@@ -175,7 +237,16 @@ export function SettingsPanel() {
             <Form.Item label="Provider">
               <Select
                 value={draft.aiProvider}
-                onChange={(v) => up('aiProvider', v)}
+                onChange={(v) =>
+                  setDraft((d) => {
+                    const fits = (AI_MODELS[v] ?? []).some((o) => o.value === d.aiModel);
+                    return {
+                      ...d,
+                      aiProvider: v as AppSettings['aiProvider'],
+                      aiModel: fits ? d.aiModel : DEFAULT_MODEL_FOR[v] ?? d.aiModel,
+                    };
+                  })
+                }
                 options={[
                   { value: 'none', label: '未配置' },
                   { value: 'anthropic', label: 'Anthropic Claude' },
@@ -190,9 +261,7 @@ export function SettingsPanel() {
                 <Input.Password value={draft.aiApiKey} onChange={(e) => up('aiApiKey', e.target.value)} />
               </Form.Item>
             )}
-            <Form.Item label="模型">
-              <Input value={draft.aiModel} onChange={(e) => up('aiModel', e.target.value)} placeholder={AI_MODEL_PLACEHOLDER[draft.aiProvider] ?? 'claude-sonnet-4-6'} />
-            </Form.Item>
+            <AiModelField draft={draft} up={up} />
             {draft.aiProvider === 'ollama' && (
               <Form.Item label="Ollama 地址" help="留空用默认 http://localhost:11434/v1；远程主机填 http://IP:11434/v1。后端需能访问该地址。">
                 <Input value={draft.aiBaseUrl} onChange={(e) => up('aiBaseUrl', e.target.value)} placeholder="http://localhost:11434/v1" />
@@ -283,6 +352,7 @@ function emptyForm(): AccountFormState {
 }
 
 function EmailAccountsTab({ accounts, onChange }: { accounts: EmailAccount[]; onChange: (accounts: EmailAccount[]) => void }) {
+  const { message } = AntdApp.useApp();
   const [form, setForm] = useState<AccountFormState | null>(null);
 
   function toggleEnabled(id: string) {
@@ -329,7 +399,7 @@ function EmailAccountsTab({ accounts, onChange }: { accounts: EmailAccount[]; on
     const host = form.host.trim() || inferred.host;
     if (form.id === null) {
       onChange([...accounts, {
-        id: crypto.randomUUID(),
+        id: uid(),
         label: form.label.trim() || undefined,
         enabled: true,
         host,
@@ -350,6 +420,7 @@ function EmailAccountsTab({ accounts, onChange }: { accounts: EmailAccount[]; on
       } : a));
     }
     setForm(null);
+    message.success(form.id === null ? '账户已添加，点底部「保存」后生效' : '账户已更新，点底部「保存」后生效');
   }
 
   return (
@@ -400,6 +471,87 @@ function EmailAccountsTab({ accounts, onChange }: { accounts: EmailAccount[]; on
         Gmail 需启用 App password，<Tag className="num">imap.gmail.com:993</Tag>
       </Typography.Text>
     </Space>
+  );
+}
+
+/**
+ * Model picker that pulls the *live* model list from the provider's API (via the
+ * backend `/api/models`) on demand, falling back to the curated {@link AI_MODELS}
+ * list when no backend/key is available. A plain dropdown — no manual typing.
+ */
+function AiModelField({
+  draft,
+  up,
+}: {
+  draft: AppSettings;
+  up: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void;
+}) {
+  const provider = draft.aiProvider;
+  const [fetched, setFetched] = useState<string[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Drop a stale live list when the provider changes.
+  useEffect(() => {
+    setFetched(null);
+    setError(null);
+  }, [provider]);
+
+  async function pull() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api<{ models: { id: string; label?: string }[] }>('/models', {
+        method: 'POST',
+        body: JSON.stringify({
+          provider,
+          apiKey: draft.aiApiKey,
+          model: draft.aiModel,
+          baseUrl: draft.aiBaseUrl || undefined,
+        }),
+      });
+      const ids = res.models.map((m) => m.id);
+      setFetched(ids);
+      if (ids.length && !ids.includes(draft.aiModel)) up('aiModel', ids[0]);
+    } catch {
+      setError('拉取失败：需本地后端运行，且 Key / 网络 / 地址正确。可继续用内置列表。');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (provider === 'none') return null;
+
+  const baseIds = (AI_MODELS[provider] ?? []).map((o) => o.value);
+  const options = modelOptions(provider, fetched ?? baseIds, draft.aiModel);
+
+  return (
+    <Form.Item
+      label="模型"
+      help={
+        provider === 'ollama'
+          ? '点「拉取最新」列出本机 Ollama 已 pull 的模型。'
+          : '点「拉取最新」从 Provider API 拉取可用模型；否则用内置列表。'
+      }
+    >
+      <Space direction="vertical" size={8} className="full-width">
+        <Space.Compact className="full-width">
+          <Select
+            showSearch
+            className="full-width"
+            value={draft.aiModel || undefined}
+            placeholder="选择模型"
+            onChange={(v) => up('aiModel', v)}
+            options={options}
+          />
+          <Button onClick={pull} loading={loading}>拉取最新</Button>
+        </Space.Compact>
+        {error && <Alert type="warning" message={error} />}
+        {fetched && !error && (
+          <Typography.Text type="secondary">已从 API 拉取 {fetched.length} 个模型。</Typography.Text>
+        )}
+      </Space>
+    </Form.Item>
   );
 }
 

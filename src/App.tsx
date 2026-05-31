@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { ConfigProvider, Layout, Typography } from 'antd';
+import { useEffect, useState } from 'react';
+import { App as AntdApp, ConfigProvider, Layout, Typography } from 'antd';
 import { Dashboard } from './components/Dashboard';
 import { TopBar } from './components/TopBar';
 import { SettingsPanel } from './components/SettingsPanel';
@@ -8,6 +8,7 @@ import { useStore } from './lib/store';
 import { migrateBrowserDataToBackend } from './lib/dataStore';
 import { GEO_ATTEMPTED_KEY, isGeoPermissionDenied, locateCurrentCity } from './lib/weather';
 import useIllustrationTheme from './illustrationTheme';
+import type { AppSettings } from './types';
 
 /**
  * Seed the weather city from browser geolocation on first launch. The "attempted"
@@ -34,16 +35,42 @@ async function tryAutoLocate(updateSettings: (p: { weatherLat: number; weatherLo
   }
 }
 
+/**
+ * Resolve the effective dark flag from the `theme` preference: 'dark'/'light'
+ * are explicit; 'system' tracks the OS `prefers-color-scheme` live.
+ */
+function useDarkMode(pref: AppSettings['theme']): boolean {
+  const [systemDark, setSystemDark] = useState(
+    () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    if (!mq) return;
+    const onChange = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return pref === 'dark' || (pref === 'system' && systemDark);
+}
+
 export default function App() {
   const init = useStore((s) => s.init);
   const ready = useStore((s) => s.ready);
   const settings = useStore((s) => s.settings);
   const updateSettings = useStore((s) => s.updateSettings);
+  const dark = useDarkMode(settings.theme);
   const configProps = useIllustrationTheme({
     reduceMotion: settings.reduceMotion,
+    dark,
   });
 
   useEffect(() => { init(); }, [init]);
+
+  // Drive the [data-theme] CSS hook for the handful of hardcoded surfaces
+  // (body background, top bar) that aren't antd-token-driven.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }, [dark]);
 
   useEffect(() => {
     if (!ready) return;
@@ -55,16 +82,19 @@ export default function App() {
 
   return (
     <ConfigProvider {...configProps}>
-      <Layout
-        className={`app-shell paper-grain ${settings.reduceMotion ? 'reduce-motion' : 'motion-ok'}`}
-      >
-        <TopBar />
-        <Layout.Content className="app-content">
-          {ready ? <Dashboard /> : <BootSplash />}
-        </Layout.Content>
-        {ready && <BriefingPlayer />}
-        <SettingsPanel />
-      </Layout>
+      {/* component={false} → no wrapper DOM node, just message/notification context. */}
+      <AntdApp component={false}>
+        <Layout
+          className={`app-shell paper-grain ${settings.reduceMotion ? 'reduce-motion' : 'motion-ok'}`}
+        >
+          <TopBar />
+          <Layout.Content className="app-content">
+            {ready ? <Dashboard /> : <BootSplash />}
+          </Layout.Content>
+          {ready && <BriefingPlayer />}
+          <SettingsPanel />
+        </Layout>
+      </AntdApp>
     </ConfigProvider>
   );
 }
