@@ -163,6 +163,8 @@ class StoredTodo(BaseModel):
     text: str
     done: bool = False
     dueDate: str | None = None
+    # Free-form extra info the user can edit from the to-do detail modal.
+    note: str | None = None
     createdAt: int
     # Source refs when this todo was confirmed from an email suggestion.
     sourceEmailId: str | None = None

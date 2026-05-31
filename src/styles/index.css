@@ -188,6 +188,64 @@ html[data-theme='dark'] .brand-title.ant-typography {
   margin: 2px 0;
 }
 
+/*
+ * To-do rows: the checkbox + clickable text must shrink so the action (删除)
+ * stays inside the card. The previous `width:100%` content pushed the action
+ * off the right edge; `min-width:0` lets the ellipsis text absorb the slack.
+ */
+.todo-item {
+  gap: 10px;
+}
+
+.todo-item .ant-list-item-action {
+  flex: none;
+  margin-inline-start: 8px;
+}
+
+/* The text area of a row is a borderless button so the whole label is clickable. */
+.todo-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.todo-open > .ant-typography {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.todo-open:hover > .ant-typography {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.todo-due {
+  flex: none;
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+/* Detail modal: stack labelled fields, each label above its control. */
+.todo-detail {
+  margin-top: 6px;
+}
+
+.todo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 /* Note scratchpad: a borderless textarea that fills the card and scrolls on its own. */
 .note-textarea.ant-input {
   flex: 1;
