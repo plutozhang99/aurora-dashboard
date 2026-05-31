@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
-from .routers import briefing, email, health, news
+from .routers import briefing, email, health, news, store
 
 
 def safe_static_file(dist_root: Path, full_path: str) -> Path | None:
@@ -53,6 +53,7 @@ app.include_router(health.router)
 app.include_router(news.router)
 app.include_router(email.router)
 app.include_router(briefing.router)
+app.include_router(store.router)
 
 
 def _mount_static() -> None:

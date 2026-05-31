@@ -52,6 +52,7 @@ AURORA_HOST=0.0.0.0 AURORA_DIST_DIR=$PWD/dist \
 | `AURORA_PORT` | `5174` | uvicorn 绑定端口 |
 | `AURORA_DIST_DIR` | `<repo>/dist` | 前端构建产物目录；存在则托管静态，否则纯 API（dev） |
 | `AURORA_IMAP_CONCURRENCY` | `3` | 跨账户并行收取的最大 IMAP 连接数（避免连接风暴） |
+| `AURORA_DATA_DIR` | `<repo>/data`（Docker 内 `/app/data`，挂在 `aurora-data` 卷） | 单用户 JSON 数据存储目录（`store.json`：待办、便签、邮件/建议已忽略状态）。指向同步盘可跨机器保留 |
 
 ## 配置入口
 
@@ -63,12 +64,13 @@ AURORA_HOST=0.0.0.0 AURORA_DIST_DIR=$PWD/dist \
 
 ## 数据存储与隐私
 
-- 设置、布局、待办、已忽略的建议、当天晨报缓存 —— 全部存在**浏览器的 IndexedDB**（每个浏览器/设备各自一份，单用户）。
+- **待办、便签、邮件/建议的已忽略状态** —— 存在**后端的 JSON 文件**（`AURORA_DATA_DIR/store.json`，无数据库）。后端不可达时这些功能不可用（与邮件/日程/晨报一致）。首次升级时旧的浏览器数据会一次性自动迁移到后端。
+- **设置、布局、当天晨报缓存** —— 仍存在**浏览器的 IndexedDB**（每个浏览器/设备各自一份）。
 - **IMAP 密码与 AI Key 也只存浏览器**，仅随请求体发往你自己的后端；后端不持久化凭据。
 - 容器侧无持久邮箱凭据；进程内 TTL 缓存（6h）只缓存 AI 判定结果，重启即清。
-- `docker-compose.yml` 里的命名卷 `aurora-data` 默认未被使用，仅为未来服务端状态预留。
+- `docker-compose.yml` 的命名卷 `aurora-data` 挂在 `/app/data`，持久化上面的 `store.json`（容器重建不丢）。
 
-> 因为状态在浏览器，换浏览器 / 清缓存会丢配置。要跨设备，请在固定主机部署后从各设备访问同一地址（建议配合 Tailscale / Cloudflare Tunnel，不要把未鉴权的实例直接暴露到公网）。
+> 设置/布局仍在浏览器，换浏览器 / 清缓存会丢这部分。待办与便签已在后端，**跨设备的前提是各设备连同一个后端**（在固定主机部署后从各设备访问同一地址，或把 `AURORA_DATA_DIR` 指向同步盘）。建议配合 Tailscale / Cloudflare Tunnel，不要把未鉴权的实例直接暴露到公网。
 
 ## PWA 安装
 

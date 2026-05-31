@@ -68,30 +68,9 @@ export function activeSuggestions(
   );
 }
 
-/** Confirm a suggestion → write a real todo (with source) and drop the suggestion. */
-export async function confirmSuggestion(s: TodoSuggestion) {
-  await db.todos.put(suggestionToTodo(s));
-  await db.suggestions.delete(s.id);
-}
-
-/** Ignore a suggestion → persist a dismissed marker so it never resurfaces. */
-export async function ignoreSuggestion(s: TodoSuggestion) {
-  await db.suggestions.put({ ...s, dismissed: true });
-}
-
-/** Set of suggestion ids the user has ignored (persisted across refresh). */
-export async function loadDismissedSuggestionIds(): Promise<Set<string>> {
-  const rows = await db.suggestions.toArray();
-  return new Set(rows.filter((r) => r.dismissed).map((r) => r.id));
-}
-
-/** Set of sourceEmailIds already promoted to a real todo (so they don't re-suggest). */
-export async function loadConfirmedSourceEmailIds(): Promise<Set<string>> {
-  const rows = await db.todos.toArray();
-  return new Set(
-    rows.map((t) => t.sourceEmailId).filter((id): id is string => !!id),
-  );
-}
+// confirm/ignore suggestions, todos, the scratchpad note, and email dismiss
+// state now live on the backend (see lib/dataStore.ts). The Dexie tables below
+// are kept only so the one-time migration can read any legacy browser data.
 
 // ── Morning briefing cache (kv) ──────────────────────────────────────────────
 
@@ -210,6 +189,7 @@ export const DEFAULT_LAYOUT: DashboardLayout = {
     { id: 'w-calendar', type: 'calendar' },
     { id: 'w-email', type: 'email' },
     { id: 'w-todo', type: 'todo' },
+    { id: 'w-note', type: 'note' },
     { id: 'w-news', type: 'news' },
   ] as WidgetInstance[],
   layouts: {
@@ -220,23 +200,26 @@ export const DEFAULT_LAYOUT: DashboardLayout = {
       { i: 'w-calendar',    x: 0, y: 4,  w: 4,  h: 7, minW: 3, minH: 4 },
       { i: 'w-email',       x: 4, y: 4,  w: 4,  h: 7, minW: 3, minH: 4 },
       { i: 'w-todo',        x: 8, y: 4,  w: 4,  h: 7, minW: 3, minH: 4 },
-      { i: 'w-news',        x: 0, y: 11, w: 12, h: 4, minW: 4, minH: 3 },
+      { i: 'w-note',        x: 0, y: 11, w: 4,  h: 5, minW: 3, minH: 3 },
+      { i: 'w-news',        x: 4, y: 11, w: 8,  h: 5, minW: 4, minH: 3 },
     ],
-    // md (8 cols): daybreak banner; calendar/email two-column; todo/news row.
+    // md (8 cols): daybreak banner; calendar/email two-column; todo/note row; news.
     md: [
       { i: 'w-now',    x: 0, y: 0,  w: 8, h: 4, minW: 4, minH: 3 },
       { i: 'w-calendar',    x: 0, y: 4,  w: 4, h: 6, minW: 3, minH: 4 },
       { i: 'w-email',       x: 4, y: 4,  w: 4, h: 6, minW: 3, minH: 4 },
       { i: 'w-todo',        x: 0, y: 10, w: 4, h: 5, minW: 3, minH: 4 },
-      { i: 'w-news',        x: 4, y: 10, w: 4, h: 5, minW: 3, minH: 4 },
+      { i: 'w-note',        x: 4, y: 10, w: 4, h: 5, minW: 3, minH: 3 },
+      { i: 'w-news',        x: 0, y: 15, w: 8, h: 4, minW: 3, minH: 3 },
     ],
-    // sm (6 cols): single column. Order = daybreak → calendar → email → todo → news.
+    // sm (6 cols): single column. Order = daybreak → calendar → email → todo → note → news.
     sm: [
       { i: 'w-now',    x: 0, y: 0,  w: 6, h: 5, minW: 4, minH: 4 },
       { i: 'w-calendar',    x: 0, y: 5,  w: 6, h: 5, minW: 4, minH: 4 },
       { i: 'w-email',       x: 0, y: 10, w: 6, h: 5, minW: 4, minH: 4 },
       { i: 'w-todo',        x: 0, y: 15, w: 6, h: 4, minW: 4, minH: 3 },
-      { i: 'w-news',        x: 0, y: 19, w: 6, h: 4, minW: 4, minH: 3 },
+      { i: 'w-note',        x: 0, y: 19, w: 6, h: 4, minW: 4, minH: 3 },
+      { i: 'w-news',        x: 0, y: 23, w: 6, h: 4, minW: 4, minH: 3 },
     ],
     // xs (4 cols): single column, same order as sm.
     xs: [
@@ -244,7 +227,8 @@ export const DEFAULT_LAYOUT: DashboardLayout = {
       { i: 'w-calendar',    x: 0, y: 5,  w: 4, h: 5, minW: 4, minH: 4 },
       { i: 'w-email',       x: 0, y: 10, w: 4, h: 5, minW: 4, minH: 4 },
       { i: 'w-todo',        x: 0, y: 15, w: 4, h: 4, minW: 4, minH: 3 },
-      { i: 'w-news',        x: 0, y: 19, w: 4, h: 4, minW: 4, minH: 3 },
+      { i: 'w-note',        x: 0, y: 19, w: 4, h: 4, minW: 4, minH: 3 },
+      { i: 'w-news',        x: 0, y: 23, w: 4, h: 4, minW: 4, minH: 3 },
     ],
   },
 };

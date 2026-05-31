@@ -104,7 +104,7 @@ export const useStore = create<DataState>((set, get) => ({
 // (e.g. the "now" banner looks empty if it's stretched).
 const WEIGHT: Record<string, number> = {
   now: 2,
-  calendar: 2, todo: 2, email: 2, news: 2,
+  calendar: 2, todo: 2, email: 2, note: 2, news: 2,
 };
 // Only the "now" banner has a real height cap (large type but bounded).
 // The list widgets scroll, so they're effectively uncapped — this lets a column
@@ -112,7 +112,7 @@ const WEIGHT: Record<string, number> = {
 // after "填满").
 const MAX_H: Record<string, number> = {
   now: 6,
-  calendar: 99, todo: 99, email: 99, news: 99,
+  calendar: 99, todo: 99, email: 99, note: 99, news: 99,
 };
 
 /**

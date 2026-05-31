@@ -1,9 +1,8 @@
 import { Alert, Badge, Button, Flex, List, Typography } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { api, apiAvailable } from '@/lib/api';
-import { db } from '@/lib/storage';
+import { dismissEmailRemote, listDismissedEmails } from '@/lib/dataStore';
 import { colorForAccount } from '@/lib/accountColors';
 import type { AppSettings, EmailItem, EmailAccount, AccountError } from '@/types';
 import { BackendDownNotice, WidgetHeader } from './CalendarWidget';
@@ -51,34 +50,22 @@ export function EmailWidget() {
     refetchInterval: 1000 * 60 * 5,
   });
 
-  const { data: localState } = useQuery({
-    queryKey: ['email-local'],
-    queryFn: async () => {
-      const rows = await db.emails.toArray();
-      return new Map(rows.map((r) => [r.id, r] as const));
+  const { data: dismissedRows } = useQuery({
+    queryKey: ['email-dismissed'],
+    queryFn: async (): Promise<EmailItem[]> => {
+      const has = await apiAvailable();
+      if (!has) return [];
+      return listDismissedEmails();
     },
   });
 
-  useEffect(() => {
-    if (!data?.items) return;
-    (async () => {
-      for (const m of data.items) {
-        const existing = await db.emails.get(m.id);
-        if (!existing) await db.emails.put(m);
-      }
-    })();
-  }, [data]);
-
-  async function dismiss(id: string) {
-    const row = (await db.emails.get(id)) ?? { id, from: '', subject: '', snippet: '', receivedAt: Date.now(), important: true, dismissed: false };
-    await db.emails.put({ ...row, dismissed: true });
-    qc.invalidateQueries({ queryKey: ['email-local'] });
+  async function dismiss(m: EmailItem) {
+    await dismissEmailRemote(m);
+    qc.invalidateQueries({ queryKey: ['email-dismissed'] });
   }
 
-  const visible = (data?.items ?? []).filter((m) => {
-    const row = localState?.get(m.id);
-    return !row?.dismissed;
-  });
+  const dismissedIds = new Set((dismissedRows ?? []).filter((r) => r.dismissed).map((r) => r.id));
+  const visible = (data?.items ?? []).filter((m) => !dismissedIds.has(m.id));
 
   const errors = data?.errors ?? [];
   const accountLabel = (id?: string) => {
@@ -110,7 +97,7 @@ export function EmailWidget() {
         renderItem={(m) => (
           <List.Item
             actions={[
-              <Button key="dismiss" size="small" onClick={() => dismiss(m.id)}>
+              <Button key="dismiss" size="small" onClick={() => dismiss(m)}>
                 已查看
               </Button>,
             ]}

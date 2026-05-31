@@ -1,18 +1,20 @@
 import { Badge, Button, Checkbox, Flex, Input, List, Space, Typography } from 'antd';
 import { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { activeSuggestions } from '@/lib/storage';
 import {
-  db,
-  activeSuggestions,
-  confirmSuggestion,
-  ignoreSuggestion,
-} from '@/lib/storage';
+  confirmSuggestionRemote,
+  deleteTodo,
+  ignoreSuggestionRemote,
+  listDismissedSuggestions,
+  listTodos,
+  putTodo,
+} from '@/lib/dataStore';
 import { useStore } from '@/lib/store';
 import { api, apiAvailable } from '@/lib/api';
 import { colorForAccount } from '@/lib/accountColors';
 import type { AppSettings, EmailAccount, TodoItem, TodoSuggestion, AccountError } from '@/types';
-import { WidgetHeader } from './CalendarWidget';
+import { BackendDownNotice, WidgetHeader } from './CalendarWidget';
 
 interface TodosResponse {
   suggestions: TodoSuggestion[];
@@ -32,20 +34,29 @@ function accountsKey(accounts: EmailAccount[]): string {
 export function TodoWidget() {
   const settings = useStore((s) => s.settings);
   const accounts = enabledAccounts(settings);
-
-  const items = useLiveQuery(
-    async () => db.todos.orderBy('createdAt').reverse().toArray(),
-    [],
-    [] as TodoItem[],
-  );
-
-  const dismissedRows = useLiveQuery(
-    async () => db.suggestions.toArray(),
-    [],
-    [] as TodoSuggestion[],
-  );
-
+  const qc = useQueryClient();
   const [input, setInput] = useState('');
+  const [showDone, setShowDone] = useState(false);
+
+  const { data: todoData } = useQuery({
+    queryKey: ['todos'],
+    queryFn: async () => {
+      const has = await apiAvailable();
+      if (!has) return { items: [] as TodoItem[], hasBackend: false };
+      return { items: await listTodos(), hasBackend: true };
+    },
+  });
+  const items = todoData?.items ?? [];
+  const hasBackend = todoData?.hasBackend ?? true;
+
+  const { data: dismissedRows } = useQuery({
+    queryKey: ['suggestions-dismissed'],
+    queryFn: async (): Promise<TodoSuggestion[]> => {
+      const has = await apiAvailable();
+      if (!has) return [];
+      return listDismissedSuggestions();
+    },
+  });
 
   const { data: fetched } = useQuery({
     queryKey: ['email-todos', accountsKey(accounts)],
@@ -70,57 +81,81 @@ export function TodoWidget() {
     refetchInterval: 1000 * 60 * 10,
   });
 
+  const invalidateTodos = () => qc.invalidateQueries({ queryKey: ['todos'] });
+  const addMut = useMutation({
+    mutationFn: (text: string) =>
+      putTodo({ id: crypto.randomUUID(), text, done: false, createdAt: Date.now() }),
+    onSuccess: invalidateTodos,
+  });
+  const toggleMut = useMutation({
+    mutationFn: (it: TodoItem) => putTodo({ ...it, done: !it.done }),
+    onSuccess: invalidateTodos,
+  });
+  const delMut = useMutation({ mutationFn: deleteTodo, onSuccess: invalidateTodos });
+  // Confirming writes a todo whose sourceEmailId then hides the suggestion.
+  const confirmMut = useMutation({ mutationFn: confirmSuggestionRemote, onSuccess: invalidateTodos });
+  const ignoreMut = useMutation({
+    mutationFn: ignoreSuggestionRemote,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['suggestions-dismissed'] }),
+  });
+
   const dismissedIds = new Set((dismissedRows ?? []).filter((r) => r.dismissed).map((r) => r.id));
   const confirmedSourceIds = new Set(
-    (items ?? []).map((t) => t.sourceEmailId).filter((id): id is string => !!id),
+    items.map((t) => t.sourceEmailId).filter((id): id is string => !!id),
   );
   const suggestions = activeSuggestions(fetched ?? [], dismissedIds, confirmedSourceIds);
 
-  async function add() {
+  function add() {
     const t = input.trim();
     if (!t) return;
-    await db.todos.put({ id: crypto.randomUUID(), text: t, done: false, createdAt: Date.now() });
+    addMut.mutate(t);
     setInput('');
   }
 
-  async function toggle(it: TodoItem) {
-    await db.todos.put({ ...it, done: !it.done });
-  }
+  const incomplete = items.filter((i) => !i.done);
+  const completed = items.filter((i) => i.done);
 
-  async function del(id: string) {
-    await db.todos.delete(id);
-  }
-
-  const remaining = items?.filter((i) => !i.done).length ?? 0;
+  const renderTodo = (it: TodoItem) => (
+    <List.Item actions={[<Button key="delete" size="small" danger onClick={() => delMut.mutate(it.id)}>删除</Button>]}>
+      <Flex align="center" gap={10} className="full-width">
+        <Checkbox checked={it.done} onChange={() => toggleMut.mutate(it)} />
+        <Typography.Text delete={it.done} type={it.done ? 'secondary' : undefined} ellipsis>
+          {it.text}
+        </Typography.Text>
+        {it.sourceEmailId && <Badge color="blue" title={it.sourceSubject ? `来自邮件：${it.sourceSubject}` : '来自邮件'} />}
+      </Flex>
+    </List.Item>
+  );
 
   return (
     <Flex vertical className="widget-content">
-      <WidgetHeader title="待办 · To-do" right={`剩 ${remaining}`} />
+      <WidgetHeader title="待办 · To-do" right={`剩 ${incomplete.length}`} />
+      {!hasBackend && <BackendDownNotice />}
       <Space.Compact className="full-width">
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onPressEnter={add}
           placeholder="新增一项待办..."
+          disabled={!hasBackend}
         />
-        <Button type="primary" onClick={add}>添加</Button>
+        <Button type="primary" onClick={add} disabled={!hasBackend}>添加</Button>
       </Space.Compact>
       <List
         split
-        dataSource={items ?? []}
-        locale={{ emptyText: '还没有待办，添加一项开始吧。' }}
-        renderItem={(it) => (
-          <List.Item actions={[<Button key="delete" size="small" danger onClick={() => del(it.id)}>删除</Button>]}>
-            <Flex align="center" gap={10} className="full-width">
-              <Checkbox checked={it.done} onChange={() => toggle(it)} />
-              <Typography.Text delete={it.done} type={it.done ? 'secondary' : undefined} ellipsis>
-                {it.text}
-              </Typography.Text>
-              {it.sourceEmailId && <Badge color="blue" title={it.sourceSubject ? `来自邮件：${it.sourceSubject}` : '来自邮件'} />}
-            </Flex>
-          </List.Item>
-        )}
+        dataSource={incomplete}
+        locale={{ emptyText: hasBackend ? '还没有待办，添加一项开始吧。' : ' ' }}
+        renderItem={renderTodo}
       />
+
+      {completed.length > 0 && (
+        <>
+          <Button type="text" size="small" className="todo-toggle-done" onClick={() => setShowDone((v) => !v)}>
+            {showDone ? '隐藏已完成' : `显示已完成 (${completed.length})`}
+          </Button>
+          {showDone && <List split dataSource={completed} renderItem={renderTodo} />}
+        </>
+      )}
 
       {suggestions.length > 0 && (
         <>
@@ -131,8 +166,8 @@ export function TodoWidget() {
             renderItem={(s) => (
               <List.Item
                 actions={[
-                  <Button key="confirm" size="small" type="primary" onClick={() => confirmSuggestion(s)}>确认</Button>,
-                  <Button key="ignore" size="small" onClick={() => ignoreSuggestion(s)}>忽略</Button>,
+                  <Button key="confirm" size="small" type="primary" onClick={() => confirmMut.mutate(s)}>确认</Button>,
+                  <Button key="ignore" size="small" onClick={() => ignoreMut.mutate(s)}>忽略</Button>,
                 ]}
               >
                 <List.Item.Meta

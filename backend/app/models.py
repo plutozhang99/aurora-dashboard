@@ -137,3 +137,67 @@ class BriefingResponse(BaseModel):
     text: str
     sections: dict | None = None
     generatedAt: int
+
+
+# ---------------------------------------------------------------------------
+# Persisted store (single-user JSON file) — shapes mirror the frontend types.
+# ---------------------------------------------------------------------------
+class StoredTodo(BaseModel):
+    id: str
+    text: str
+    done: bool = False
+    dueDate: str | None = None
+    createdAt: int
+    # Source refs when this todo was confirmed from an email suggestion.
+    sourceEmailId: str | None = None
+    sourceAccountId: str | None = None
+    sourceSubject: str | None = None
+
+
+class TodoListResponse(BaseModel):
+    items: list[StoredTodo]
+
+
+class StoredNote(BaseModel):
+    text: str = ""
+
+
+class StoredEmail(BaseModel):
+    """A dismissed/cached important-email marker (only ``dismissed`` is load-bearing)."""
+
+    id: str
+    from_: str = Field(default="", serialization_alias="from", validation_alias="from")
+    subject: str = ""
+    snippet: str = ""
+    receivedAt: int = 0
+    important: bool = True
+    dismissed: bool = False
+    sourceAccountId: str | None = None
+
+    model_config = {"populate_by_name": True}
+
+
+class EmailListResponse(BaseModel):
+    items: list[StoredEmail]
+
+
+class StoredSuggestion(BaseModel):
+    """A dismissed (ignored) email→todo suggestion marker, so it never resurfaces."""
+
+    id: str
+    text: str
+    sourceAccountId: str
+    sourceEmailId: str
+    from_: str = Field(default="", serialization_alias="from", validation_alias="from")
+    subject: str = ""
+    dismissed: bool = True
+
+    model_config = {"populate_by_name": True}
+
+
+class SuggestionListResponse(BaseModel):
+    items: list[StoredSuggestion]
+
+
+class OkResponse(BaseModel):
+    ok: bool = True

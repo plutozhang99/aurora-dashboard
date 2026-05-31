@@ -159,6 +159,23 @@ body {
   width: 100%;
 }
 
+/* "显示已完成" toggle sits flush-left, low-emphasis, between the two todo lists. */
+.todo-toggle-done {
+  align-self: flex-start;
+  padding-inline: 0;
+  margin: 2px 0;
+}
+
+/* Note scratchpad: a borderless textarea that fills the card and scrolls on its own. */
+.note-textarea.ant-input {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  resize: none;
+  line-height: 1.7;
+  background: transparent;
+}
+
 .settings-tab {
   padding-top: 4px;
 }

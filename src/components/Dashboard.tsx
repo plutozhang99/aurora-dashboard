@@ -10,6 +10,7 @@ const COLUMN_HINT: Record<string, number> = {
   calendar: 1,
   email: 1.15,
   todo: 1,
+  note: 1,
   news: 1.25,
 };
 

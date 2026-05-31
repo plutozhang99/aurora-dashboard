@@ -5,6 +5,7 @@ import { TopBar } from './components/TopBar';
 import { SettingsPanel } from './components/SettingsPanel';
 import { BriefingPlayer } from './components/BriefingPlayer';
 import { useStore } from './lib/store';
+import { migrateBrowserDataToBackend } from './lib/dataStore';
 import { GEO_ATTEMPTED_KEY, isGeoPermissionDenied, locateCurrentCity } from './lib/weather';
 import useIllustrationTheme from './illustrationTheme';
 
@@ -47,6 +48,9 @@ export default function App() {
   useEffect(() => {
     if (!ready) return;
     void tryAutoLocate(updateSettings);
+    // Best-effort, run-once import of any legacy browser-stored data into the
+    // backend so existing todos/note/dismiss-state aren't stranded after upgrade.
+    void migrateBrowserDataToBackend();
   }, [ready, updateSettings]);
 
   return (

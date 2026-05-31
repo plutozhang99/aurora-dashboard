@@ -13,10 +13,12 @@ services:
       AURORA_DIST_DIR: "/app/dist"
       AURORA_IMAP_CONCURRENCY: "3"
     restart: unless-stopped
-    # Settings & credentials live in the browser's IndexedDB (single-user,
-    # local-first). The container holds no persistent mailbox credentials; the
-    # TTL cache is in-process. The named volume below is optional and unused by
-    # default — kept for future server-side state.
+    # Settings & credentials still live in the browser's IndexedDB (single-user,
+    # local-first); the container holds no mailbox credentials. The named volume
+    # persists the JSON data store (/app/data/store.json) — todos, the scratchpad
+    # note, and email/suggestion dismiss state — so it survives container
+    # rebuilds. Point a host bind-mount here (or sync the volume) to carry that
+    # data across machines.
     volumes:
       - aurora-data:/app/data
 

@@ -10,6 +10,10 @@ dist-ssr
 *.log
 *.tsbuildinfo
 
+# Single-user JSON data store (todos / note / dismiss state). Override location
+# with AURORA_DATA_DIR; point it at a synced folder to persist across machines.
+data/
+
 # Python backend
 **/.venv/
 __pycache__/

@@ -18,6 +18,20 @@ PORT: int = int(os.environ.get("AURORA_PORT", "5174"))
 IMAP_CONCURRENCY: int = int(os.environ.get("AURORA_IMAP_CONCURRENCY", "3"))
 
 
+def data_dir() -> Path:
+    """Directory for the single-user JSON data store (todos, note, dismiss state).
+
+    Override with ``AURORA_DATA_DIR`` (e.g. a synced folder or a Docker volume so
+    the data survives across machines). Defaults to ``<repo-root>/data``. The
+    directory is created lazily on first write, not here.
+    """
+    raw = os.environ.get("AURORA_DATA_DIR")
+    if raw:
+        return Path(raw)
+    # backend/app/config.py -> backend/app -> backend -> repo root
+    return Path(__file__).resolve().parents[2] / "data"
+
+
 def dist_dir() -> Path | None:
     """Return the built frontend directory if it exists, else None.
 

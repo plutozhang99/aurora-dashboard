@@ -3,6 +3,7 @@ export type WidgetType =
   | 'calendar'
   | 'email'
   | 'todo'
+  | 'note' // free-form scratchpad, auto-saved locally
   | 'news';
 // Note: the briefing isn't a grid widget — it's an always-on bottom dock
 // (BriefingPlayer) so it stays out of the layout/catalog.
