@@ -7,7 +7,7 @@ The blocking ``imap-tools`` work happens inside :func:`fetch_account_blocking`
 
 The merge/dedup/sort logic is pure and importable for unit tests — no IMAP or
 network involved. ``FetchedEmail`` is a plain dict with keys:
-``uid, from, subject, snippet, date, messageId``.
+``uid, from, subject, snippet, body, date, messageId``.
 """
 
 from __future__ import annotations
@@ -118,6 +118,7 @@ def fetch_account_blocking(account: EmailAccount, since: datetime) -> list[Fetch
                     "from": msg.from_ or "",
                     "subject": msg.subject or "",
                     "snippet": _collapse_ws(msg.text or "")[:400],
+                    "body": (msg.text or "")[:20000],
                     "date": date_ms,
                     "messageId": (msg.headers.get("message-id", ("",)) or ("",))[0]
                     if msg.headers

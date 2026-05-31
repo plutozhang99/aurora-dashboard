@@ -65,6 +65,8 @@ export interface EmailItem {
   from: string;
   subject: string;
   snippet: string;
+  /** Full plain-text body (capped server-side); used by the detail modal. */
+  body?: string;
   receivedAt: number;
   important: boolean;
   dismissed: boolean;

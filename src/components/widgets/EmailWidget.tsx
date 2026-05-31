@@ -1,4 +1,5 @@
-import { Alert, Badge, Button, Flex, List, Typography } from 'antd';
+import { Alert, Badge, Button, Flex, List, Modal, Tag, Typography } from 'antd';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useStore } from '@/lib/store';
 import { api, apiAvailable } from '@/lib/api';
@@ -27,6 +28,7 @@ export function EmailWidget() {
   const settings = useStore((s) => s.settings);
   const qc = useQueryClient();
   const accounts = enabledAccounts(settings);
+  const [active, setActive] = useState<EmailItem | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['email', accountsKey(accounts)],
@@ -95,8 +97,17 @@ export function EmailWidget() {
         dataSource={visible}
         renderItem={(m) => (
           <List.Item
+            style={{ cursor: 'pointer' }}
+            onClick={() => setActive(m)}
             actions={[
-              <Button key="dismiss" size="small" onClick={() => dismiss(m)}>
+              <Button
+                key="dismiss"
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dismiss(m);
+                }}
+              >
                 已查看
               </Button>,
             ]}
@@ -114,6 +125,61 @@ export function EmailWidget() {
           </List.Item>
         )}
       />
+      <Modal
+        open={!!active}
+        title={active?.subject || '(无主题)'}
+        onCancel={() => setActive(null)}
+        footer={null}
+        width={640}
+        styles={{ body: { maxHeight: '60vh', overflow: 'auto' } }}
+        destroyOnHidden
+      >
+        {active && (
+          <Flex vertical gap={12}>
+            <Flex vertical gap={2}>
+              <Typography.Text type="secondary">发件人</Typography.Text>
+              <Typography.Text copyable>{active.from}</Typography.Text>
+            </Flex>
+            <Flex gap={24} wrap>
+              <Flex vertical gap={2}>
+                <Typography.Text type="secondary">账户</Typography.Text>
+                <Flex align="center" gap={6}>
+                  <Badge color={colorForAccount(active.sourceAccountId ?? '')} />
+                  <Typography.Text>{accountLabel(active.sourceAccountId) || '—'}</Typography.Text>
+                </Flex>
+              </Flex>
+              <Flex vertical gap={2}>
+                <Typography.Text type="secondary">时间</Typography.Text>
+                <Typography.Text>
+                  {active.receivedAt ? new Date(active.receivedAt).toLocaleString() : '—'}
+                </Typography.Text>
+              </Flex>
+              {active.important && (
+                <Flex vertical gap={2}>
+                  <Typography.Text type="secondary">标记</Typography.Text>
+                  <Tag color="red" style={{ marginInlineEnd: 0 }}>重要</Tag>
+                </Flex>
+              )}
+            </Flex>
+            <Flex vertical gap={2}>
+              <Typography.Text type="secondary">正文</Typography.Text>
+              <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', marginBottom: 0 }}>
+                {active.body || active.snippet || '(无正文内容)'}
+              </Typography.Paragraph>
+            </Flex>
+            <Flex justify="flex-end">
+              <Button
+                onClick={() => {
+                  dismiss(active);
+                  setActive(null);
+                }}
+              >
+                标记已查看
+              </Button>
+            </Flex>
+          </Flex>
+        )}
+      </Modal>
     </Flex>
   );
 }

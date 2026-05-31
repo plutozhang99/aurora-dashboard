@@ -68,6 +68,7 @@ async def important(body: EmailRequest) -> EmailResponse:
                     **{"from": m.get("from", "")},
                     subject=m.get("subject", ""),
                     snippet=(m.get("snippet", "") or "")[:140],
+                    body=(m.get("body", "") or "")[:20000],
                     receivedAt=m.get("date", 0),
                     important=True,
                     dismissed=False,

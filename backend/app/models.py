@@ -106,6 +106,7 @@ class EmailItem(BaseModel):
     from_: str = Field(serialization_alias="from", validation_alias="from")
     subject: str
     snippet: str
+    body: str = ""
     receivedAt: int
     important: bool = True
     dismissed: bool = False
