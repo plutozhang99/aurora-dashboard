@@ -1,13 +1,13 @@
-import { Alert, Badge, Divider, Flex, List, Tag, Typography } from 'antd';
-import { useQuery } from '@tanstack/react-query';
+import { Alert, Badge, Button, Divider, Flex, List, Tag, Typography } from 'antd';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useStore } from '@/lib/store';
 import { api, apiAvailable } from '@/lib/api';
 import { aiPayload } from '@/lib/ai';
+import { dismissScheduleRemote, listDismissedSchedules } from '@/lib/dataStore';
 import { colorForAccount } from '@/lib/accountColors';
 import { todayStr } from '@/lib/briefingTrigger';
-import type { AppSettings, EmailAccount, AccountError } from '@/types';
+import type { AppSettings, EmailAccount, AccountError, ScheduleItem } from '@/types';
 
-interface ScheduleItem { id: string; time: string; title: string; source: string; sourceAccountId?: string }
 interface ScheduleResponse { items: ScheduleItem[]; errors?: AccountError[] | null }
 
 function enabledAccounts(settings: AppSettings): EmailAccount[] {
@@ -22,6 +22,7 @@ function accountsKey(accounts: EmailAccount[]): string {
 
 export function CalendarWidget() {
   const settings = useStore((s) => s.settings);
+  const qc = useQueryClient();
   const accounts = enabledAccounts(settings);
 
   const { data, isLoading } = useQuery({
@@ -46,6 +47,23 @@ export function CalendarWidget() {
     refetchInterval: 1000 * 60 * 10,
   });
 
+  const { data: dismissedRows } = useQuery({
+    queryKey: ['schedule-dismissed'],
+    queryFn: async (): Promise<ScheduleItem[]> => {
+      const has = await apiAvailable();
+      if (!has) return [];
+      return listDismissedSchedules();
+    },
+  });
+
+  async function dismiss(s: ScheduleItem) {
+    await dismissScheduleRemote(s);
+    qc.invalidateQueries({ queryKey: ['schedule-dismissed'] });
+  }
+
+  const dismissedIds = new Set((dismissedRows ?? []).filter((r) => r.dismissed).map((r) => r.id));
+  const visible = (data?.items ?? []).filter((it) => !dismissedIds.has(it.id));
+
   const today = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
   const errors = data?.errors ?? [];
   const accountLabel = (id?: string) => {
@@ -66,7 +84,7 @@ export function CalendarWidget() {
           description={errors.map((e) => accountLabel(e.accountId) || e.accountId).join('、')}
         />
       )}
-      {data?.hasBackend && !isLoading && data.items.length === 0 && errors.length === 0 && (
+      {data?.hasBackend && !isLoading && visible.length === 0 && errors.length === 0 && (
         <Typography.Paragraph type="secondary">
           {accounts.length > 0
             ? '今天没有从邮件中识别的日程。'
@@ -75,9 +93,20 @@ export function CalendarWidget() {
       )}
       <List
         split
-        dataSource={data?.items ?? []}
+        dataSource={visible}
         renderItem={(it) => (
-          <List.Item>
+          <List.Item
+            actions={[
+              <Button
+                key="remove"
+                size="small"
+                type="text"
+                onClick={() => dismiss(it)}
+              >
+                移除
+              </Button>,
+            ]}
+          >
             <List.Item.Meta
               avatar={<Badge color={colorForAccount(it.sourceAccountId ?? '')} />}
               title={<Typography.Text>{it.time} · {it.title}</Typography.Text>}

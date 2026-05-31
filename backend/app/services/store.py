@@ -12,7 +12,8 @@ Shape of ``store.json``::
       "todos":       [ {TodoItem}, ... ],
       "note":        "free text",
       "suggestions": [ {dismissed TodoSuggestion}, ... ],
-      "emails":      [ {dismissed EmailItem}, ... ]
+      "emails":      [ {dismissed EmailItem}, ... ],
+      "schedules":   [ {removed ScheduleItem}, ... ]
     }
 """
 
@@ -32,11 +33,11 @@ from .. import config
 _lock = asyncio.Lock()
 
 # List-valued collections in the document, keyed by id.
-COLLECTIONS = ("todos", "suggestions", "emails")
+COLLECTIONS = ("todos", "suggestions", "emails", "schedules")
 
 
 def _default_doc() -> dict[str, Any]:
-    return {"todos": [], "note": "", "suggestions": [], "emails": []}
+    return {"todos": [], "note": "", "suggestions": [], "emails": [], "schedules": []}
 
 
 def _path() -> Path:

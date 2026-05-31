@@ -215,5 +215,24 @@ class SuggestionListResponse(BaseModel):
     items: list[StoredSuggestion]
 
 
+class StoredSchedule(BaseModel):
+    """A removed today-schedule marker (only ``dismissed`` is load-bearing).
+
+    The id mirrors the extracted ``ScheduleItem`` id (``s-{account}-{uid}``), so
+    a removed event stays hidden across refetches of the same source email.
+    """
+
+    id: str
+    time: str = ""
+    title: str = ""
+    source: str = ""
+    sourceAccountId: str | None = None
+    dismissed: bool = True
+
+
+class ScheduleListResponse(BaseModel):
+    items: list[StoredSchedule]
+
+
 class OkResponse(BaseModel):
     ok: bool = True
