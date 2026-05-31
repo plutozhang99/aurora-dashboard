@@ -117,6 +117,7 @@ export function BriefingPlayer() {
     setSpeaking(true);
     tts.speak(briefing.text, {
       lang: 'zh-CN',
+      voice: settings.ttsVoice,
       onEnd: () => setSpeaking(false),
       onError: () => setSpeaking(false),
     });
@@ -130,7 +131,7 @@ export function BriefingPlayer() {
 
   const greeting = greetingFor(now);
   const dateLabel = now.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
-  const canPlay = ttsAvailable() && !!briefing;
+  const canPlay = ttsAvailable(settings.ttsEngine) && !!briefing;
   const subtitle = briefing
     ? introLine(briefing.text)
     : hasBackend === false

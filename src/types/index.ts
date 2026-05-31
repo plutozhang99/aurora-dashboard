@@ -136,10 +136,15 @@ export interface AppSettings {
   // Morning briefing
   /** Earliest local time the briefing auto-generates on first open, "HH:MM". */
   morningTime: string;
-  /** TTS engine for reading the briefing aloud. 'cloud' reserved (not yet implemented). */
+  /** TTS engine for reading the briefing aloud. 'cloud' uses the backend
+   *  edge-tts endpoint; 'browser' uses native Web Speech. */
   ttsEngine: 'browser' | 'cloud';
+  /** edge-tts neural voice id for the cloud engine (e.g. "zh-CN-XiaoxiaoNeural"). */
+  ttsVoice: string;
 
   // Theme
+  /** Color scheme. 'system' follows the OS prefers-color-scheme. */
+  theme: 'system' | 'light' | 'dark';
   reduceMotion: boolean;
   accent: string;
 
@@ -172,6 +177,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   serverUrl: '',
   morningTime: '06:00',
   ttsEngine: 'browser',
+  ttsVoice: 'zh-CN-XiaoxiaoNeural',
+  theme: 'system',
   reduceMotion: false,
   accent: '#9b5cff',
   // Filled in below once DEFAULT_PROMPTS is declared (TS hoisting note: this property is set via Object.assign on next line).

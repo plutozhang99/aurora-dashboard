@@ -16,6 +16,7 @@ dependencies = [
     "anthropic>=0.39",
     "openai>=1.30",
     "cachetools>=5.3",
+    "edge-tts>=6.1",
 ]
 
 [project.optional-dependencies]

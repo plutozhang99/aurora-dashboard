@@ -1,17 +1,24 @@
 /**
  * Pluggable text-to-speech.
  *
- * v1 ships only a browser (Web Speech) engine; the `TtsEngine` interface is
- * defined so a 'cloud' engine could slot in later without touching callers.
- * All entry points guard for environments without `speechSynthesis`.
+ * Two engines behind a common `TtsEngine` interface:
+ *  - `browser` — native Web Speech (free, offline, voice quality varies by OS).
+ *  - `cloud`   — POSTs the text to the backend `/api/tts` (edge-tts → MP3) and
+ *               plays the returned audio. Falls back to the browser engine if
+ *               the backend is unreachable, so the user still hears something.
+ * All entry points guard for environments without `speechSynthesis` / `Audio`.
  */
 
+import { apiBase } from './api';
+
 export interface SpeakOptions {
-  /** BCP-47 lang hint, e.g. "zh-CN". */
+  /** BCP-47 lang hint, e.g. "zh-CN". Used by the browser engine. */
   lang?: string;
+  /** Cloud-engine neural voice id, e.g. "zh-CN-XiaoxiaoNeural". */
+  voice?: string;
   /** 0.1–10, default 1. */
   rate?: number;
-  /** 0–2, default 1. */
+  /** 0–2, default 1. (Browser engine only.) */
   pitch?: number;
   onStart?: () => void;
   onEnd?: () => void;
@@ -27,6 +34,10 @@ export interface TtsEngine {
 
 function hasSpeechSynthesis(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window;
+}
+
+function hasAudio(): boolean {
+  return typeof window !== 'undefined' && typeof window.Audio !== 'undefined';
 }
 
 /** Browser Web Speech engine. No-ops gracefully when unsupported. */
@@ -52,11 +63,84 @@ const browserEngine: TtsEngine = {
   },
 };
 
-// Cloud engine reserved for a future version (R13). Interface-only for now.
+/**
+ * Cloud engine: synthesize on the backend (edge-tts) and play the MP3.
+ *
+ * Single instance with mutable playback state — `stop()` aborts both an
+ * in-flight request and a playing clip. Any backend/network failure transparently
+ * falls back to the browser engine so playback never silently dies.
+ */
+function createCloudEngine(): TtsEngine {
+  let audio: HTMLAudioElement | null = null;
+  let objectUrl: string | null = null;
+  let token = 0; // bumped on stop()/new speak() to ignore stale responses
+
+  function cleanup() {
+    if (audio) {
+      audio.pause();
+      audio.src = '';
+      audio = null;
+    }
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
+    }
+  }
+
+  return {
+    available: hasAudio,
+    speak(text, opts) {
+      if (!text.trim()) {
+        opts?.onError?.(new Error('empty text'));
+        return;
+      }
+      const mine = ++token;
+      cleanup();
+      browserEngine.stop();
+
+      fetch(`${apiBase()}/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: opts?.voice, rate: opts?.rate ?? 1 }),
+      })
+        .then(async (res) => {
+          if (!res.ok) throw new Error(`TTS ${res.status}`);
+          return res.blob();
+        })
+        .then((blob) => {
+          if (mine !== token) return; // superseded by a newer call / stopped
+          objectUrl = URL.createObjectURL(blob);
+          audio = new window.Audio(objectUrl);
+          audio.onplay = () => opts?.onStart?.();
+          audio.onended = () => {
+            if (mine === token) cleanup();
+            opts?.onEnd?.();
+          };
+          audio.onerror = () => {
+            if (mine === token) cleanup();
+            opts?.onError?.(new Error('audio playback failed'));
+          };
+          audio.play().catch((e) => opts?.onError?.(e));
+        })
+        .catch(() => {
+          // Backend unreachable or synthesis failed — fall back to the browser
+          // engine so the briefing still plays.
+          if (mine === token) browserEngine.speak(text, opts);
+        });
+    },
+    stop() {
+      token++;
+      cleanup();
+      browserEngine.stop();
+    },
+  };
+}
+
+const cloudEngine = createCloudEngine();
+
 const engines: Record<'browser' | 'cloud', TtsEngine> = {
   browser: browserEngine,
-  // Falls back to the browser engine until a real cloud adapter lands.
-  cloud: browserEngine,
+  cloud: cloudEngine,
 };
 
 export function getTts(engine: 'browser' | 'cloud' = 'browser'): TtsEngine {
@@ -72,7 +156,7 @@ export function stop() {
   getTts('browser').stop();
 }
 
-/** Whether any TTS is usable right now (used to disable the play button). */
-export function ttsAvailable(): boolean {
-  return browserEngine.available();
+/** Whether the given engine is usable right now (used to gate the play button). */
+export function ttsAvailable(engine: 'browser' | 'cloud' = 'browser'): boolean {
+  return getTts(engine).available();
 }

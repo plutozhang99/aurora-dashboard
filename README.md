@@ -8,7 +8,7 @@
 
 ## 特性
 
-- **🌅 晨间播报** — 首屏顶部一张通栏卡片：聚合重要邮件 + 今日日程 + 新闻偏好源，经 AI 总结成一段口语化简报；**语音优先**（默认浏览器 TTS），文本默认折叠手动展开。当天首次打开、已过设定的清晨时间且当天未生成时自动生成；可手动「重新生成」，每天至多缓存一份。
+- **🌅 晨间播报** — 首屏顶部一张通栏卡片：聚合重要邮件 + 今日日程 + 新闻偏好源，经 AI 总结成一段口语化简报；**语音优先**（默认浏览器 TTS，可在设置切换云端 edge-tts 免费高音质音色），文本默认折叠手动展开。当天首次打开、已过设定的清晨时间且当天未生成时自动生成；可手动「重新生成」，每天至多缓存一份。
 - **📬 多账户邮件聚合** — 任意数量 IMAP 账户增删改、独立启用；重要邮件跨所有启用账户**合并、去重、时间倒序**为一个统一列表，来源用轻量色点标识（悬停显账户名），不按账户分栏。单账户失败被隔离，不影响其余。
 - **💡 邮件待办建议** — AI（或关键词降级）从邮件识别「可能的待办」进入独立建议区，一键「确认」转为正式待办（保留邮件来源链接）或「忽略」；默认不污染正式待办。
 - **🕐 六个核心 widget** — 晨间播报、今日日程、重要邮件、待办、新闻、时钟、天气。
@@ -86,13 +86,13 @@ src/
     api.ts                    后端 fetch 帮助（apiAvailable 判后端是否在线）
     accountColors.ts          来源账户取色
     imapConfig.ts             常见邮箱 host/port 推断
-    tts.ts                    可插拔语音引擎（v1 浏览器 Web Speech）
+    tts.ts                    可插拔语音引擎（浏览器 Web Speech + 云端 edge-tts）
     briefingTrigger.ts        清晨自动生成触发判定（纯函数）
     weather.ts                Open-Meteo client
   types/index.ts              全局类型 + 默认设置 + 默认提示词
 backend/                      Python / FastAPI（见 backend/README.md）
   app/{main,config,models}.py
-  app/routers/{health,news,email,briefing}.py
+  app/routers/{health,news,email,briefing,store,tts}.py
   app/services/{imap,classify,briefing,news,llm}.py
   tests/                      pytest 套件
 Dockerfile / docker-compose.yml / .dockerignore
@@ -108,7 +108,6 @@ Dockerfile / docker-compose.yml / .dockerignore
 
 ## 路线图 / 未完成
 
-- 云端 TTS 适配器（已留可插拔接口，v1 仅浏览器 TTS）。
 - 线程级邮件去重（v1 按 Message-ID + 回退键）。
 - Google Calendar / Outlook ICS 直接接入（目前从邮件抽日程）。
 - 国际化（当前默认中文）。

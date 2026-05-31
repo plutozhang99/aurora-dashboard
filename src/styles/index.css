@@ -20,6 +20,28 @@ body {
   color: #2c2c2c;
 }
 
+/* Dark mode: only the few hardcoded surfaces below aren't antd-token-driven
+   (the body backdrop + the fixed top bar + brand wordmark). Everything else
+   adapts via the ConfigProvider dark tokens in illustrationTheme.ts. */
+html[data-theme='dark'] body {
+  color: #f3ece0;
+  background:
+    linear-gradient(90deg, rgba(82, 196, 26, 0.1) 0 1px, transparent 1px 28px),
+    linear-gradient(0deg, rgba(77, 171, 247, 0.1) 0 1px, transparent 1px 28px),
+    #1c1916;
+}
+
+html[data-theme='dark'] .top-bar {
+  background: #2a251f;
+  border-bottom-color: #e8dcc6;
+  box-shadow: 0 4px 0 #e8dcc6;
+}
+
+html[data-theme='dark'] .brand-title,
+html[data-theme='dark'] .brand-title.ant-typography {
+  color: #f3ece0;
+}
+
 .app-shell {
   min-height: 100vh;
   background: transparent;

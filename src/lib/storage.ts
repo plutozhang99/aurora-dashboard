@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type { AppSettings, DashboardLayout, EmailAccount, EmailItem, TodoItem, TodoSuggestion, WidgetInstance } from '@/types';
 import { DEFAULT_SETTINGS } from '@/types';
+import { uid } from './id';
 
 interface KVRow { key: string; value: unknown }
 
@@ -43,7 +44,7 @@ export async function setKV(key: string, value: unknown) {
  */
 export function suggestionToTodo(s: TodoSuggestion, now: number = Date.now()): TodoItem {
   return {
-    id: crypto.randomUUID(),
+    id: uid(),
     text: s.text,
     done: false,
     createdAt: now,
@@ -122,7 +123,7 @@ export function migrateEmailAccounts(raw: LegacyEmailFields): EmailAccount[] {
   if (!user) return [];
   return [
     {
-      id: crypto.randomUUID(),
+      id: uid(),
       label: undefined,
       enabled: !!raw.emailEnabled,
       host: raw.emailHost ?? '',

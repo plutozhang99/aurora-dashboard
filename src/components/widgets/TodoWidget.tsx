@@ -13,6 +13,7 @@ import {
 import { useStore } from '@/lib/store';
 import { api, apiAvailable } from '@/lib/api';
 import { aiPayload } from '@/lib/ai';
+import { uid } from '@/lib/id';
 import { colorForAccount } from '@/lib/accountColors';
 import type { AppSettings, EmailAccount, TodoItem, TodoSuggestion, AccountError } from '@/types';
 import { BackendDownNotice, WidgetHeader } from './CalendarWidget';
@@ -83,7 +84,7 @@ export function TodoWidget() {
   const invalidateTodos = () => qc.invalidateQueries({ queryKey: ['todos'] });
   const addMut = useMutation({
     mutationFn: (text: string) =>
-      putTodo({ id: crypto.randomUUID(), text, done: false, createdAt: Date.now() }),
+      putTodo({ id: uid(), text, done: false, createdAt: Date.now() }),
     onSuccess: invalidateTodos,
   });
   const toggleMut = useMutation({
