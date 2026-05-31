@@ -94,6 +94,34 @@ def test_suggestion_dismiss_and_delete():
     assert client.get("/api/store/suggestions").json()["items"] == []
 
 
+def test_schedules_empty_by_default():
+    assert client.get("/api/store/schedules").json() == {"items": []}
+
+
+def test_schedule_dismiss_roundtrip():
+    body = {
+        "id": "s-acc1-7",
+        "time": "09:30",
+        "title": "晨会",
+        "source": "team@corp.com",
+        "sourceAccountId": "acc1",
+        "dismissed": True,
+    }
+    res = client.put("/api/store/schedules/s-acc1-7", json=body)
+    assert res.status_code == 200
+    assert res.json()["dismissed"] is True
+
+    items = client.get("/api/store/schedules").json()["items"]
+    assert len(items) == 1
+    assert items[0]["id"] == "s-acc1-7"
+    assert items[0]["title"] == "晨会"
+    assert items[0]["dismissed"] is True
+
+    # Re-PUT (upsert by id) must not duplicate the marker.
+    client.put("/api/store/schedules/s-acc1-7", json=body)
+    assert len(client.get("/api/store/schedules").json()["items"]) == 1
+
+
 async def test_corrupt_file_falls_back_to_empty(tmp_path, monkeypatch):
     monkeypatch.setenv("AURORA_DATA_DIR", str(tmp_path))
     (tmp_path / "store.json").write_text("{ not valid json", encoding="utf-8")

@@ -13,8 +13,10 @@ from fastapi import APIRouter
 from ..models import (
     EmailListResponse,
     OkResponse,
+    ScheduleListResponse,
     StoredEmail,
     StoredNote,
+    StoredSchedule,
     StoredSuggestion,
     StoredTodo,
     SuggestionListResponse,
@@ -93,3 +95,17 @@ async def put_suggestion(suggestion_id: str, body: StoredSuggestion) -> StoredSu
 async def delete_suggestion(suggestion_id: str) -> OkResponse:
     await store.delete_item("suggestions", suggestion_id)
     return OkResponse()
+
+
+# ── Schedule (today's events) removed markers ─────────────────────────────────
+@router.get("/schedules", response_model=ScheduleListResponse)
+async def list_schedules() -> ScheduleListResponse:
+    rows = await store.get_list("schedules")
+    return ScheduleListResponse(items=[StoredSchedule.model_validate(r) for r in rows])
+
+
+@router.put("/schedules/{schedule_id}", response_model=StoredSchedule)
+async def put_schedule(schedule_id: str, body: StoredSchedule) -> StoredSchedule:
+    record = body.model_copy(update={"id": schedule_id})
+    await store.upsert_item("schedules", record.model_dump(by_alias=True))
+    return record

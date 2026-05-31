@@ -74,6 +74,20 @@ export interface EmailItem {
   sourceAccountId?: string;
 }
 
+/**
+ * A today-schedule event extracted from email. The id is stable per source
+ * email (`s-{accountId}-{uid}`), so a removed event stays hidden across refetches.
+ */
+export interface ScheduleItem {
+  id: string;
+  time: string;
+  title: string;
+  source: string;
+  sourceAccountId?: string;
+  /** Locally set when the user removes the event; persisted so it stays hidden. */
+  dismissed?: boolean;
+}
+
 /** A non-fatal per-account failure surfaced by aggregated endpoints. */
 export interface AccountError {
   accountId: string;

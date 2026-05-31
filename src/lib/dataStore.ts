@@ -10,7 +10,7 @@
  */
 import { api } from './api';
 import { db, getKV, setKV, suggestionToTodo } from './storage';
-import type { EmailItem, TodoItem, TodoSuggestion } from '@/types';
+import type { EmailItem, ScheduleItem, TodoItem, TodoSuggestion } from '@/types';
 
 const enc = encodeURIComponent;
 
@@ -74,6 +74,20 @@ export async function dismissEmailRemote(m: EmailItem): Promise<void> {
   await api(`/store/emails/${enc(m.id)}`, {
     method: 'PUT',
     body: JSON.stringify({ ...m, dismissed: true }),
+  });
+}
+
+// ── Today-schedule removed state ──────────────────────────────────────────────
+
+export async function listDismissedSchedules(): Promise<ScheduleItem[]> {
+  const res = await api<{ items: ScheduleItem[] }>('/store/schedules');
+  return res.items;
+}
+
+export async function dismissScheduleRemote(s: ScheduleItem): Promise<void> {
+  await api(`/store/schedules/${enc(s.id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ ...s, dismissed: true }),
   });
 }
 
